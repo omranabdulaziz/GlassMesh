@@ -14,7 +14,6 @@ def url_from_blender():
     import gpu
     import struct
     import platform
-    import urllib.parse
 
     query_params = {
         "type": "bug_report",
@@ -52,5 +51,23 @@ def url_from_blender():
         bpy.app.build_hash.decode('ascii'),
     )
 
-    query_str = urllib.parse.urlencode(query_params)
-    return "https://redirect.blender.org/?" + query_str
+    return _glassmesh_issue_url(query_params)
+
+
+def _glassmesh_issue_url(query_params):
+    # GlassMesh: problems are reported to the GlassMesh project, not to Blender's bug tracker
+    # (GlassMesh is an unofficial fork, its bugs must not end up in Blender's tracker).
+    import urllib.parse
+    body = (
+        "**System Information**\n"
+        "Operating system: {:s}\n"
+        "Graphics card: {:s}\n"
+        "\n"
+        "**GlassMesh Version**\n"
+        "Broken: {:s}\n"
+        "\n"
+        "**Short description of the problem**\n"
+        "\n"
+        "**Exact steps for others to reproduce the problem**\n"
+    ).format(query_params.get("os", ""), query_params.get("gpu", ""), query_params.get("broken_version", ""))
+    return "https://github.com/omranabdulaziz/GlassMesh/issues/new?" + urllib.parse.urlencode({"body": body})
