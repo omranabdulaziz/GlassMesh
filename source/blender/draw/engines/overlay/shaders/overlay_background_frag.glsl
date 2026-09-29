@@ -55,6 +55,14 @@ void main()
   OVERLAY_BackgroundType type = OVERLAY_BackgroundType(bg_type) == BG_SOLID_CHECKER ?
                                     (depth == 1.0f ? BG_SOLID : BG_CHECKER) :
                                     OVERLAY_BackgroundType(bg_type);
+  if (OVERLAY_BackgroundType(bg_type) == BG_GLASS_CHECKER) {
+    if (depth == 1.0f) {
+      /* Leave the destination (and its alpha) untouched, see the blend equation above. */
+      frag_color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+      return;
+    }
+    type = BG_CHECKER;
+  }
 
   switch (type) {
     case BG_SOLID:
@@ -95,6 +103,7 @@ void main()
       frag_color = float4(float3(1.0f - alpha), 0.0f);
       return;
     case BG_SOLID_CHECKER:
+    case BG_GLASS_CHECKER:
       /* Unreachable. */
       assert(false);
       return;

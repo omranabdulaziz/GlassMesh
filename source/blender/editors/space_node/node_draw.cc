@@ -4731,9 +4731,9 @@ static void draw_nodetree(const bContext &C, ARegion &region, bNodeTree &ntree)
 
 static void draw_background_color()
 {
-  float color[3];
-  ui::theme::get_color_3fv(TH_BACK, color);
-  GPU_clear_color(color[0], color[1], color[2], 1.0);
+  /* GlassMesh: keeps the theme's translucency (frosted glass) when the glass effect is used, same
+   * as `GPU_clear_color(back.r, back.g, back.b, 1.0)` otherwise. */
+  ui::theme::frame_buffer_clear(TH_BACK);
 }
 
 void node_draw_space(const bContext &C, ARegion &region)

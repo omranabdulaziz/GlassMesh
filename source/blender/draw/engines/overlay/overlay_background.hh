@@ -10,6 +10,8 @@
 
 #include "DNA_world_types.h"
 
+#include "UI_glass.hh"
+
 #include "draw_cache.hh"
 
 #include "overlay_base.hh"
@@ -38,7 +40,8 @@ class Background : Overlay {
       color_override[3] = 1.0f;
     }
     else if (state.is_space_image()) {
-      background_type = BG_SOLID_CHECKER;
+      /* GlassMesh: frosted glass around the image, the image itself stays opaque. */
+      background_type = ui::glass_enabled() ? BG_GLASS_CHECKER : BG_SOLID_CHECKER;
     }
     else if (state.is_space_node()) {
       background_type = BG_MASK;

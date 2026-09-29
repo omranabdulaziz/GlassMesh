@@ -4,6 +4,7 @@
 
 #include "BKE_context.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface.hh"
 #include "UI_resources.hh"
 #include "UI_view2d.hh"
@@ -57,12 +58,30 @@ int SpreadsheetDrawer::column_width(int /*column_index*/) const
   return 5 * UI_UNIT_X;
 }
 
+/**
+ * GlassMesh: the index column and the header row are a light veil on the glass, the opaque shade
+ * of the editor color would cover it. Returns true when blending must be turned off afterwards.
+ */
+static bool uniform_band_color()
+{
+  if (ui::glass_enabled()) {
+    immUniformColor4f(1.0f, 1.0f, 1.0f, 0.06f);
+    GPU_blend(GPU_BLEND_ALPHA);
+    return true;
+  }
+  immUniformThemeColorShade(TH_BACK, 11);
+  return false;
+}
+
 static void draw_index_column_background(const uint pos,
                                          const ARegion *region,
                                          const SpreadsheetDrawer &drawer)
 {
-  immUniformThemeColorShade(TH_BACK, 11);
+  const bool blend = uniform_band_color();
   immRectf(pos, 0, region->winy - drawer.top_row_height, drawer.left_column_width, 0);
+  if (blend) {
+    GPU_blend(GPU_BLEND_NONE);
+  }
 }
 
 static void draw_alternating_row_overlay(const uint pos,
@@ -91,8 +110,11 @@ static void draw_top_row_background(const uint pos,
                                     const ARegion *region,
                                     const SpreadsheetDrawer &drawer)
 {
-  immUniformThemeColorShade(TH_BACK, 11);
+  const bool blend = uniform_band_color();
   immRectf(pos, 0, region->winy, region->winx, region->winy - drawer.top_row_height);
+  if (blend) {
+    GPU_blend(GPU_BLEND_NONE);
+  }
 }
 
 static void draw_separator_lines(const uint pos,

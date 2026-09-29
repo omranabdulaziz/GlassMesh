@@ -24,6 +24,7 @@
 #include "BLI_rect.h"
 
 #include "DNA_screen_types.h"
+#include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 
 #include "BKE_screen.hh"
@@ -31,6 +32,7 @@
 #include "GPU_batch.hh"
 #include "GPU_batch_presets.hh"
 #include "GPU_framebuffer.hh"
+#include "GPU_immediate.hh"
 #include "GPU_matrix.hh"
 #include "GPU_shader.hh"
 #include "GPU_state.hh"
@@ -39,6 +41,7 @@
 #include "ED_screen.hh"
 
 #include "UI_glass.hh"
+#include "UI_resources.hh"
 
 #include "WM_api.hh"
 
@@ -284,6 +287,47 @@ void wm_draw_glass_cards(const wmWindow *win)
   for (const ScrArea &area : screen->areabase) {
     ui::glass_card_draw(ui::GlassCardPass::Body, &area.totrct, win_size, false);
   }
+}
+
+bool wm_draw_glass_region_is_frosted_viewport(const ScrArea *area, const ARegion *region)
+{
+  if (!ui::glass_enabled()) {
+    return false;
+  }
+  /* Regions drawn through a #GPUViewport whose background doesn't change how their content looks:
+   * - The node editor and the sequencer timeline clear their background with the theme alpha.
+   * - The image editor leaves the area around the image transparent (#BG_GLASS_CHECKER).
+   * The 3D viewport (and the sequencer preview) stay opaque: a see-through background would
+   * change the colors of what is being made. */
+  return ELEM(area->spacetype, SPACE_IMAGE, SPACE_NODE, SPACE_SEQ) &&
+         region->regiontype == RGN_TYPE_WINDOW && region->runtime->draw_buffer &&
+         region->runtime->draw_buffer->viewport;
+}
+
+void wm_draw_glass_frosted_viewport_backdrop(const ScrArea *area, const ARegion *region)
+{
+  if (area->spacetype != SPACE_IMAGE) {
+    return;
+  }
+  /* The image editor's (translucent) background color, around the image. */
+  float color[4];
+  ui::theme::get_color_back_glass_4fv(area->spacetype, color);
+  if (color[3] <= 0.0f) {
+    color[3] = 1.0f;
+  }
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  immUniformColor4fv(color);
+  const GPUBlend old_blend = GPU_blend_get();
+  GPU_blend(GPU_BLEND_ALPHA);
+  immRectf(pos,
+           region->winrct.xmin,
+           region->winrct.ymin,
+           region->winrct.xmax + 1,
+           region->winrct.ymax + 1);
+  GPU_blend(old_blend);
+  immUnbindProgram();
 }
 
 bool wm_draw_glass_region_is_translucent(const ARegion *region)

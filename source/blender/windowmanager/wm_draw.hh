@@ -53,6 +53,13 @@ void wm_draw_glass_window_end(wmWindowManager *wm, const wmWindow *win);
 void wm_draw_glass_cards(const wmWindow *win);
 /** A non-viewport region that can be blended (translucent) with the glass style. */
 bool wm_draw_glass_region_is_translucent(const ARegion *region);
+/**
+ * A region drawn through a #GPUViewport (node editor, image editor, sequencer timeline) that is
+ * blended over the glass as frosted glass, with pre-multiplied alpha.
+ */
+bool wm_draw_glass_region_is_frosted_viewport(const ScrArea *area, const ARegion *region);
+/** Draw what is behind a region for which #wm_draw_glass_region_is_frosted_viewport is true. */
+void wm_draw_glass_frosted_viewport_backdrop(const ScrArea *area, const ARegion *region);
 /** A region that should get a frosted (blurred) backdrop. */
 bool wm_draw_glass_region_wants_blur(ARegion *region);
 /**

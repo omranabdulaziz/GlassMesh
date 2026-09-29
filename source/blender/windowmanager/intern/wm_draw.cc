@@ -1153,6 +1153,13 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
           /* GlassMesh: blend translucent editors over the wallpaper. */
           wm_draw_region_blend(&region, 0, true);
         }
+        else if (wm_draw_glass_region_is_frosted_viewport(area, &region)) {
+          /* GlassMesh: editors drawn through a viewport, with a frosted background. */
+          wm_draw_glass_frosted_viewport_backdrop(area, &region);
+          GPU_blend(GPU_BLEND_ALPHA_PREMULT);
+          wm_draw_region_blit(&region, view);
+          GPU_blend(GPU_BLEND_NONE);
+        }
         else {
           /* Blit from off-screen buffer. */
           wm_draw_region_blit(&region, view);

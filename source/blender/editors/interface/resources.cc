@@ -216,6 +216,15 @@ const uchar *get_color_ptr(bTheme *btheme, int spacetype, int colorid)
           }
           else {
             cp = btheme->regions.sidebars.back;
+            /* GlassMesh: the side-bar color is kept clear (zero alpha) for side-bars overlapping
+             * their editor, where only the panels are glass. Side-bars that don't overlap
+             * (preferences navigation, file browser side-bar...) would be opaque with it, they
+             * are the same glass as their editor instead. */
+            if (cp[3] == 0 && glass_enabled() &&
+                !ED_region_is_overlap(spacetype, g_theme_state.regionid))
+            {
+              cp = ts->back;
+            }
           }
 
           copy_v4_v4_uchar(back, cp);
@@ -1610,6 +1619,13 @@ void frame_buffer_clear(int colorid)
 
   get_color_3fv(colorid, col);
   GPU_clear_color(col[0], col[1], col[2], 1.0f);
+}
+
+void get_color_back_glass_4fv(int spacetype, float r_col[4])
+{
+  g_theme_back_keep_alpha = true;
+  get_color_type_4fv(TH_BACK, spacetype, r_col);
+  g_theme_back_keep_alpha = false;
 }
 
 int get_menu_shadow_width()

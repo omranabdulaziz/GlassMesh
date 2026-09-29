@@ -18,6 +18,9 @@ enum [[host_shared]] OVERLAY_BackgroundType : uint32_t {
   BG_RADIAL = 3u,
   BG_SOLID_CHECKER = 4u,
   BG_MASK = 5u,
+  /* GlassMesh: like #BG_SOLID_CHECKER, but the area around the image is left transparent, the
+   * window draws frosted glass behind it (see `wm_draw_glass.cc`). */
+  BG_GLASS_CHECKER = 6u,
 };
 
 enum [[host_shared]] OVERLAY_UVLineStyle : uint32_t {
