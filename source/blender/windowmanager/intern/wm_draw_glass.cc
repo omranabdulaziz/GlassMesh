@@ -29,6 +29,7 @@
 #include "GPU_batch.hh"
 #include "GPU_batch_presets.hh"
 #include "GPU_framebuffer.hh"
+#include "GPU_immediate.hh"
 #include "GPU_matrix.hh"
 #include "GPU_shader.hh"
 #include "GPU_state.hh"
@@ -37,6 +38,7 @@
 #include "ED_screen.hh"
 
 #include "UI_glass.hh"
+#include "UI_resources.hh"
 
 #include "WM_api.hh"
 
@@ -118,17 +120,48 @@ bool wm_draw_glass_region_is_glass_viewport(const ScrArea *area, const ARegion *
   if (!ui::glass_enabled()) {
     return false;
   }
-  /* The 3D viewport leaves its background transparent with the #TH_BACKGROUND_GLASS theme
-   * background (see the overlay engine). Viewports with an opaque background (world, rendered
-   * shading...) simply cover the wallpaper drawn behind them. */
-  return area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_WINDOW &&
-         region->runtime->draw_buffer && region->runtime->draw_buffer->viewport;
+  /* - The 3D viewport leaves its background transparent with the #TH_BACKGROUND_GLASS theme
+   *   background (see the overlay engine). Viewports with an opaque background (world, rendered
+   *   shading...) simply cover the wallpaper drawn behind them.
+   * - The image editor leaves the area around the image transparent (#BG_GLASS_CHECKER).
+   * - The node editor clears its background with the theme's translucency. */
+  return ELEM(area->spacetype, SPACE_VIEW3D, SPACE_IMAGE, SPACE_NODE) &&
+         region->regiontype == RGN_TYPE_WINDOW && region->runtime->draw_buffer &&
+         region->runtime->draw_buffer->viewport;
 }
 
-void wm_draw_glass_viewport_backdrop(const wmWindow *win, const ARegion *region)
+void wm_draw_glass_viewport_backdrop(const wmWindow *win,
+                                     const ScrArea *area,
+                                     const ARegion *region)
 {
-  const int2 win_size = WM_window_native_pixel_size(win);
-  ui::glass_viewport_backdrop_draw(&region->winrct, win_size);
+  if (area->spacetype == SPACE_VIEW3D) {
+    /* The (sharp) wallpaper, as if seen through a window. */
+    const int2 win_size = WM_window_native_pixel_size(win);
+    ui::glass_viewport_backdrop_draw(&region->winrct, win_size);
+    return;
+  }
+  if (area->spacetype != SPACE_IMAGE) {
+    return;
+  }
+  /* A glass card like the other editors: their translucent background color over the frosted
+   * window background that is already drawn behind all editors. */
+  float color[4];
+  ui::theme::get_color_back_glass_4fv(area->spacetype, color);
+  if (color[3] <= 0.0f) {
+    color[3] = 1.0f;
+  }
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  immUniformColor4fv(color);
+  GPU_blend(GPU_BLEND_ALPHA);
+  immRectf(pos,
+           region->winrct.xmin,
+           region->winrct.ymin,
+           region->winrct.xmax + 1,
+           region->winrct.ymax + 1);
+  GPU_blend(GPU_BLEND_NONE);
+  immUnbindProgram();
 }
 
 /** Bind the glass backdrop shader and set everything except the textures. */

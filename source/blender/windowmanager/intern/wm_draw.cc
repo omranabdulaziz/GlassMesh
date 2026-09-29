@@ -1151,8 +1151,8 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
           wm_draw_region_blend(&region, 0, true);
         }
         else if (wm_draw_glass_region_is_glass_viewport(area, &region)) {
-          /* GlassMesh: the wallpaper shows through the 3D viewport's transparent background. */
-          wm_draw_glass_viewport_backdrop(win, &region);
+          /* GlassMesh: the wallpaper shows through the viewport's transparent background. */
+          wm_draw_glass_viewport_backdrop(win, area, &region);
           GPU_blend(GPU_BLEND_ALPHA_PREMULT);
           wm_draw_region_blit(&region, view);
           GPU_blend(GPU_BLEND_NONE);

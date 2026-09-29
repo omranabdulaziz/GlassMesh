@@ -40,7 +40,8 @@ class Background : Overlay {
       color_override[3] = 1.0f;
     }
     else if (state.is_space_image()) {
-      background_type = BG_SOLID_CHECKER;
+      /* GlassMesh: the image editor is a glass card around the image (see `wm_draw_glass.cc`). */
+      background_type = ui::glass_enabled() ? BG_GLASS_CHECKER : BG_SOLID_CHECKER;
     }
     else if (state.is_space_node()) {
       background_type = BG_MASK;
