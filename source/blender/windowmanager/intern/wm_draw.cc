@@ -1135,8 +1135,9 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
   GPU_clear_color(0, 0, 0, 0);
 #endif
 
-  /* GlassMesh: wallpaper behind (translucent) editors and in the gaps between them, and the
-   * editors' glass cards on it. */
+  /* GlassMesh: what is behind the window (the wallpaper, or the window behind it) shows behind
+   * (translucent) editors and in the gaps between them, and the editors' glass cards on it. */
+  wm_draw_glass_window_begin(wm, win);
   wm_draw_glass_wallpaper(win);
   wm_draw_glass_cards(win);
 
@@ -1256,6 +1257,9 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
       wm_software_cursor_motion_clear_with_window(win);
     }
   }
+
+  /* GlassMesh: keep what was drawn for the windows in front of this one. */
+  wm_draw_glass_window_end(wm, win);
 
   GPU_debug_group_end();
 }

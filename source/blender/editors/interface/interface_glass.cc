@@ -144,35 +144,57 @@ static void glass_wallpaper_free_textures()
   g_wallpaper.loaded = false;
 }
 
-/** Draw \a src into the whole of \a dst with the wallpaper shader (off-screen pass). */
-static void glass_wallpaper_pass(GPUOffScreen *dst, gpu::Texture *src, float lod, float2 step)
+/**
+ * Draw \a src unchanged (raw colors) into \a rect_ndc of the bound off-screen buffer, with
+ * `uv = ndc * uv_ndc.xy + uv_ndc.zw`, optionally blurred along \a step. The matrices must be
+ * identity (see #glass_offscreen_begin).
+ */
+static void glass_raw_quad(gpu::Texture *src,
+                           const float rect_ndc[4],
+                           const float uv_ndc[4],
+                           float lod,
+                           float2 step)
 {
-  GPU_offscreen_bind(dst, true);
-  GPU_matrix_push_projection();
-  GPU_matrix_push();
-  /* Identity matrices: the quad is given in normalized device coordinates. */
-  GPU_matrix_identity_projection_set();
-  GPU_matrix_identity_set();
-
   gpu::Batch *batch = GPU_batch_preset_quad();
   GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_GLASS_WALLPAPER);
-  const float rect[4] = {-1.0f, -1.0f, 1.0f, 1.0f};
-  const float uv[4] = {0.5f, 0.5f, 0.5f, 0.5f};
   const float tint[4] = {0.0f, 0.0f, 0.0f, 0.0f};
   const float params[4] = {lod, 1.0f, 1.0f, 0.0f};
   const float blur[4] = {step.x, step.y, 1.0f, 0.0f};
-  GPU_batch_uniform_4fv(batch, "rect_geom", rect);
-  GPU_batch_uniform_4fv(batch, "uv_transform", uv);
+  GPU_batch_uniform_4fv(batch, "rect_geom", rect_ndc);
+  GPU_batch_uniform_4fv(batch, "uv_transform", uv_ndc);
   GPU_batch_uniform_4fv(batch, "tint", tint);
   GPU_batch_uniform_4fv(batch, "params", params);
   GPU_batch_uniform_4fv(batch, "blur", blur);
   GPU_batch_texture_bind(batch, "image", src);
   GPU_batch_draw(batch);
   GPU_texture_unbind(src);
+}
 
+/** Bind \a dst for drawing in normalized device coordinates (identity matrices). */
+static void glass_offscreen_begin(GPUOffScreen *dst)
+{
+  GPU_offscreen_bind(dst, true);
+  GPU_matrix_push_projection();
+  GPU_matrix_push();
+  GPU_matrix_identity_projection_set();
+  GPU_matrix_identity_set();
+}
+
+static void glass_offscreen_end(GPUOffScreen *dst)
+{
   GPU_matrix_pop();
   GPU_matrix_pop_projection();
   GPU_offscreen_unbind(dst, true);
+}
+
+/** Draw \a src into the whole of \a dst with the wallpaper shader (off-screen pass). */
+static void glass_wallpaper_pass(GPUOffScreen *dst, gpu::Texture *src, float lod, float2 step)
+{
+  glass_offscreen_begin(dst);
+  const float rect[4] = {-1.0f, -1.0f, 1.0f, 1.0f};
+  const float uv[4] = {0.5f, 0.5f, 0.5f, 0.5f};
+  glass_raw_quad(src, rect, uv, lod, step);
+  glass_offscreen_end(dst);
 }
 
 static GPUOffScreen *glass_frosted_offscreen_create(int w, int h)
@@ -273,11 +295,29 @@ void glass_free_resources()
 /** \name Drawing
  * \{ */
 
-/** Map window pixels to wallpaper coordinates, so the wallpaper covers the whole window. */
+/** What is behind the window being drawn, see #glass_window_backdrop_set. */
+static GlassWindowBackdrop g_backdrop;
+static bool g_backdrop_is_set = false;
+
+void glass_window_backdrop_set(const GlassWindowBackdrop *backdrop)
+{
+  g_backdrop_is_set = backdrop != nullptr;
+  g_backdrop = backdrop ? *backdrop : GlassWindowBackdrop{};
+}
+
+/**
+ * Map window pixels to wallpaper coordinates. The wallpaper covers the desktop when the window's
+ * place on it is known, so it lies still behind windows that move, like a real desktop, and
+ * several windows show the same wallpaper. Otherwise it covers the window.
+ */
 static void glass_wallpaper_uv_transform(const int window_size[2], float r_uv[4])
 {
-  const float w = float(max_ii(window_size[0], 1));
-  const float h = float(max_ii(window_size[1], 1));
+  const bool use_desktop = g_backdrop_is_set && g_backdrop.desktop_size[0] > 0 &&
+                           g_backdrop.desktop_size[1] > 0;
+  const float w = float(max_ii(use_desktop ? g_backdrop.desktop_size[0] : window_size[0], 1));
+  const float h = float(max_ii(use_desktop ? g_backdrop.desktop_size[1] : window_size[1], 1));
+  const float ofs_x = use_desktop ? float(g_backdrop.window_pos[0]) : 0.0f;
+  const float ofs_y = use_desktop ? float(g_backdrop.window_pos[1]) : 0.0f;
   float dw = w;
   float dh = w / g_wallpaper.aspect;
   if (dh < h) {
@@ -286,8 +326,102 @@ static void glass_wallpaper_uv_transform(const int window_size[2], float r_uv[4]
   }
   r_uv[0] = 1.0f / dw;
   r_uv[1] = 1.0f / dh;
-  r_uv[2] = -((w - dw) * 0.5f) / dw;
-  r_uv[3] = -((h - dh) * 0.5f) / dh;
+  r_uv[2] = (ofs_x - (w - dw) * 0.5f) / dw;
+  r_uv[3] = (ofs_y - (h - dh) * 0.5f) / dh;
+}
+
+/**
+ * The textures of what is behind the window: a frosted one and a sharper one (with mip-maps,
+ * for refraction and diffusion), and how window pixels map to them.
+ */
+static void glass_backdrop_textures(const int window_size[2],
+                                    gpu::Texture **r_frosted,
+                                    gpu::Texture **r_sharp,
+                                    float r_uv[4])
+{
+  if (g_backdrop_is_set && g_backdrop.behind) {
+    /* Another window is behind this one, its frosted image covers the window. */
+    *r_frosted = g_backdrop.behind;
+    *r_sharp = g_backdrop.behind;
+    r_uv[0] = 1.0f / float(max_ii(window_size[0], 1));
+    r_uv[1] = 1.0f / float(max_ii(window_size[1], 1));
+    r_uv[2] = 0.0f;
+    r_uv[3] = 0.0f;
+    return;
+  }
+  *r_frosted = GPU_offscreen_color_texture(g_wallpaper.frosted);
+  *r_sharp = g_wallpaper.image;
+  glass_wallpaper_uv_transform(window_size, r_uv);
+}
+
+bool glass_frost_copy(gpu::Texture *src, GPUOffScreen **r_dst, GPUOffScreen **r_tmp)
+{
+  const int w = max_ii(1, GPU_texture_width(src) / 2);
+  const int h = max_ii(1, GPU_texture_height(src) / 2);
+  for (GPUOffScreen **ofs : {r_dst, r_tmp}) {
+    if (*ofs && (GPU_offscreen_width(*ofs) != w || GPU_offscreen_height(*ofs) != h)) {
+      GPU_offscreen_free(*ofs);
+      *ofs = nullptr;
+    }
+    if (*ofs == nullptr) {
+      *ofs = glass_frosted_offscreen_create(w, h);
+    }
+    if (*ofs == nullptr) {
+      return false;
+    }
+  }
+  const GPUBlend old_blend = GPU_blend_get();
+  GPU_blend(GPU_BLEND_NONE);
+  glass_wallpaper_pass(*r_dst, src, 0.0f, float2(0.0f));
+  for (int i = 0; i < 2; i++) {
+    glass_wallpaper_pass(
+        *r_tmp, GPU_offscreen_color_texture(*r_dst), 0.0f, float2(1.5f / float(w), 0.0f));
+    glass_wallpaper_pass(
+        *r_dst, GPU_offscreen_color_texture(*r_tmp), 0.0f, float2(0.0f, 1.5f / float(h)));
+  }
+  GPU_blend(old_blend);
+  return true;
+}
+
+bool glass_backdrop_compose(GPUOffScreen *dst,
+                            gpu::Texture *window_frame,
+                            const float frame_rect[4])
+{
+  if (!glass_wallpaper_ensure() || !g_backdrop_is_set) {
+    return false;
+  }
+  const float w = float(max_ii(g_backdrop.window_size[0], 1));
+  const float h = float(max_ii(g_backdrop.window_size[1], 1));
+
+  const GPUBlend old_blend = GPU_blend_get();
+  GPU_blend(GPU_BLEND_NONE);
+  glass_offscreen_begin(dst);
+
+  /* The frosted wallpaper around the other window. Window pixel `p = (ndc * 0.5 + 0.5) * size`. */
+  float uv[4];
+  glass_wallpaper_uv_transform(g_backdrop.window_size, uv);
+  const float full[4] = {-1.0f, -1.0f, 1.0f, 1.0f};
+  const float wallpaper_uv[4] = {0.5f * w * uv[0],
+                                 0.5f * h * uv[1],
+                                 0.5f * w * uv[0] + uv[2],
+                                 0.5f * h * uv[1] + uv[3]};
+  glass_raw_quad(
+      GPU_offscreen_color_texture(g_wallpaper.frosted), full, wallpaper_uv, 0.0f, float2(0.0f));
+
+  /* The other window where it is. */
+  const float fw = max_ff(frame_rect[2] - frame_rect[0], 1.0f);
+  const float fh = max_ff(frame_rect[3] - frame_rect[1], 1.0f);
+  const float rect_ndc[4] = {frame_rect[0] / w * 2.0f - 1.0f,
+                             frame_rect[1] / h * 2.0f - 1.0f,
+                             frame_rect[2] / w * 2.0f - 1.0f,
+                             frame_rect[3] / h * 2.0f - 1.0f};
+  const float frame_uv[4] = {
+      0.5f * w / fw, 0.5f * h / fh, (0.5f * w - frame_rect[0]) / fw, (0.5f * h - frame_rect[1]) / fh};
+  glass_raw_quad(window_frame, rect_ndc, frame_uv, 0.0f, float2(0.0f));
+
+  glass_offscreen_end(dst);
+  GPU_blend(old_blend);
+  return true;
 }
 
 /**
@@ -311,7 +445,8 @@ void glass_wallpaper_draw(const int window_size[2])
   }
   float tint[4], params[4], uv[4];
   glass_frosted_look(tint, params);
-  glass_wallpaper_uv_transform(window_size, uv);
+  gpu::Texture *frosted, *sharp;
+  glass_backdrop_textures(window_size, &frosted, &sharp, uv);
   const float blur[4] = {0.0f, 0.0f, 0.0f, 0.0f};
   const float rect[4] = {0.0f, 0.0f, float(window_size[0]), float(window_size[1])};
 
@@ -322,7 +457,7 @@ void glass_wallpaper_draw(const int window_size[2])
   GPU_batch_uniform_4fv(batch, "tint", tint);
   GPU_batch_uniform_4fv(batch, "params", params);
   GPU_batch_uniform_4fv(batch, "blur", blur);
-  GPU_batch_texture_bind(batch, "image", GPU_offscreen_color_texture(g_wallpaper.frosted));
+  GPU_batch_texture_bind(batch, "image", frosted);
 
   const GPUBlend old_blend = GPU_blend_get();
   GPU_blend(GPU_BLEND_NONE);
@@ -370,7 +505,8 @@ bool glass_card_draw(const GlassCardPass pass,
   }
 
   float uv[4];
-  glass_wallpaper_uv_transform(window_size, uv);
+  gpu::Texture *frosted, *sharp;
+  glass_backdrop_textures(window_size, &frosted, &sharp, uv);
   float frame_tint[4], frame_look[4], card_tint[4], card_look[4];
   glass_frosted_look(frame_tint, frame_look);
   /* The frosted look's first parameter is a mip-map level, the card shader takes saturation,
@@ -379,6 +515,7 @@ bool glass_card_draw(const GlassCardPass pass,
   glass_card_look(card_tint, card_look);
   const float optics[4] = {14.0f * scale, 9.0f * scale, 5.0f * scale, 0.09f};
   const float rim[4] = {1.25f * scale, active ? 0.75f : 0.5f, 0.55f, 2.0f};
+  const float diffuse[4] = {0.5f, 6.5f, glass_corner_exponent(), 0.0f};
 
   gpu::Batch *batch = GPU_batch_preset_quad();
   GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_GLASS_CARD);
@@ -392,9 +529,10 @@ bool glass_card_draw(const GlassCardPass pass,
   GPU_batch_uniform_4fv(batch, "card_look", card_look);
   GPU_batch_uniform_4fv(batch, "optics", optics);
   GPU_batch_uniform_4fv(batch, "rim", rim);
+  GPU_batch_uniform_4fv(batch, "diffuse", diffuse);
   GPU_batch_uniform_1i(batch, "card_mode", int(pass));
-  GPU_batch_texture_bind(batch, "frosted", GPU_offscreen_color_texture(g_wallpaper.frosted));
-  GPU_batch_texture_bind(batch, "image", g_wallpaper.image);
+  GPU_batch_texture_bind(batch, "frosted", frosted);
+  GPU_batch_texture_bind(batch, "image", sharp);
 
   const GPUBlend old_blend = GPU_blend_get();
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);

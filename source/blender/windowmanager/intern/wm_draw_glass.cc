@@ -19,6 +19,7 @@
  */
 
 #include "BLI_listbase_iterator.hh"
+#include "BLI_map.hh"
 #include "BLI_math_base.h"
 #include "BLI_rect.h"
 
@@ -42,6 +43,7 @@
 #include "WM_api.hh"
 
 #include "wm_draw.hh"
+#include "wm_window.hh"
 
 namespace blender {
 
@@ -61,6 +63,34 @@ static struct {
   /** Pre-filtered, reduced resolution copy used for the blur. */
   GPUOffScreen *reduced = nullptr;
 } g_glass;
+
+/**
+ * Windows show the GlassMesh window behind them: while a window has child windows (preferences,
+ * file browser, render view...), a frosted copy of its last frame is kept, and its child windows
+ * show it where they lie over it, with the wallpaper (the stand-in for the desktop) around it.
+ */
+struct GlassWindow {
+  /** Frosted copy of the window's last frame, and a temporary buffer to make it. */
+  GPUOffScreen *frame = nullptr;
+  GPUOffScreen *frame_tmp = nullptr;
+  /** What is behind the window: the frosted parent window and wallpaper. */
+  GPUOffScreen *behind = nullptr;
+};
+
+/** Resolution divider of what is behind a window (it is blurred a lot). */
+static constexpr int GLASS_BEHIND_REDUCE = 8;
+
+static Map<const wmWindow *, GlassWindow> g_windows;
+
+static void glass_window_free(GlassWindow &glass_win)
+{
+  for (GPUOffScreen **ofs : {&glass_win.frame, &glass_win.frame_tmp, &glass_win.behind}) {
+    if (*ofs) {
+      GPU_offscreen_free(*ofs);
+      *ofs = nullptr;
+    }
+  }
+}
 
 static void glass_offscreen_ensure(GPUOffScreen **offscreen, const int2 &size)
 {
@@ -83,6 +113,10 @@ static void glass_offscreen_ensure(GPUOffScreen **offscreen, const int2 &size)
 
 void wm_draw_glass_exit()
 {
+  for (GlassWindow &glass_win : g_windows.values()) {
+    glass_window_free(glass_win);
+  }
+  g_windows.clear();
   ui::glass_free_resources();
   if (g_glass.full) {
     GPU_offscreen_free(g_glass.full);
@@ -91,6 +125,133 @@ void wm_draw_glass_exit()
   if (g_glass.reduced) {
     GPU_offscreen_free(g_glass.reduced);
     g_glass.reduced = nullptr;
+  }
+}
+
+/** Where the window is on the desktop (native pixels, from the bottom left), if that is known. */
+static bool glass_window_desktop_rect(const wmWindow *win, int2 &r_pos, int2 &r_desktop_size)
+{
+  if (!(WM_capabilities_flag() & WM_CAPABILITY_WINDOW_POSITION)) {
+    return false;
+  }
+  int desktop_size[2];
+  if (!wm_get_desktopsize(desktop_size) || desktop_size[0] <= 0 || desktop_size[1] <= 0) {
+    return false;
+  }
+  const int2 native_size = WM_window_native_pixel_size(win);
+  const float fac = float(native_size.x) / float(max_ii(win->sizex, 1));
+  r_pos = int2(int(float(win->posx) * fac), int(float(win->posy) * fac));
+  r_desktop_size = int2(int(float(desktop_size[0]) * fac), int(float(desktop_size[1]) * fac));
+  return true;
+}
+
+static bool glass_window_has_children(const wmWindowManager *wm, const wmWindow *win)
+{
+  for (const wmWindow &other : wm->windows) {
+    if (other.parent == win) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void wm_draw_glass_window_begin(const wmWindowManager *wm, const wmWindow *win)
+{
+  if (!ui::glass_enabled()) {
+    return;
+  }
+  /* Forget closed windows (their pointers are only compared, never used). */
+  g_windows.remove_if([&](const auto &item) {
+    for (const wmWindow &other : wm->windows) {
+      if (&other == item.key) {
+        return false;
+      }
+    }
+    glass_window_free(item.value);
+    return true;
+  });
+
+  ui::GlassWindowBackdrop backdrop;
+  const int2 win_size = WM_window_native_pixel_size(win);
+  backdrop.window_size[0] = win_size.x;
+  backdrop.window_size[1] = win_size.y;
+  int2 win_pos, desktop_size;
+  const bool has_position = glass_window_desktop_rect(win, win_pos, desktop_size);
+  if (has_position) {
+    backdrop.window_pos[0] = win_pos.x;
+    backdrop.window_pos[1] = win_pos.y;
+    backdrop.desktop_size[0] = desktop_size.x;
+    backdrop.desktop_size[1] = desktop_size.y;
+  }
+  ui::glass_window_backdrop_set(&backdrop);
+
+  /* A child window lying over its parent shows (the frosted copy of) the parent behind it. */
+  const GlassWindow *parent_glass = win->parent ? g_windows.lookup_ptr(win->parent) : nullptr;
+  if (!has_position || !parent_glass || !parent_glass->frame || !ui::glass_blur_enabled()) {
+    return;
+  }
+  int2 parent_pos, parent_desktop_size;
+  if (!glass_window_desktop_rect(win->parent, parent_pos, parent_desktop_size)) {
+    return;
+  }
+  const int2 parent_size = WM_window_native_pixel_size(win->parent);
+  const float frame_rect[4] = {float(parent_pos.x - win_pos.x),
+                               float(parent_pos.y - win_pos.y),
+                               float(parent_pos.x - win_pos.x + parent_size.x),
+                               float(parent_pos.y - win_pos.y + parent_size.y)};
+  if (frame_rect[2] <= 0.0f || frame_rect[3] <= 0.0f || frame_rect[0] >= float(win_size.x) ||
+      frame_rect[1] >= float(win_size.y))
+  {
+    return;
+  }
+  GlassWindow &glass_win = g_windows.lookup_or_add_default(win);
+  const int2 behind_size = {max_ii(1, win_size.x / GLASS_BEHIND_REDUCE),
+                            max_ii(1, win_size.y / GLASS_BEHIND_REDUCE)};
+  glass_offscreen_ensure(&glass_win.behind, behind_size);
+  if (glass_win.behind &&
+      ui::glass_backdrop_compose(
+          glass_win.behind, GPU_offscreen_color_texture(parent_glass->frame), frame_rect))
+  {
+    gpu::Texture *behind = GPU_offscreen_color_texture(glass_win.behind);
+    GPU_texture_filter_mode(behind, true);
+    GPU_texture_extend_mode(behind, GPU_SAMPLER_EXTEND_MODE_EXTEND);
+    backdrop.behind = behind;
+    ui::glass_window_backdrop_set(&backdrop);
+  }
+}
+
+void wm_draw_glass_window_end(wmWindowManager *wm, const wmWindow *win)
+{
+  if (!ui::glass_enabled()) {
+    return;
+  }
+  ui::glass_window_backdrop_set(nullptr);
+
+  const bool keep_frame = ui::glass_blur_enabled() && glass_window_has_children(wm, win) &&
+                          (WM_capabilities_flag() & WM_CAPABILITY_WINDOW_POSITION);
+  if (!keep_frame) {
+    if (GlassWindow *glass_win = g_windows.lookup_ptr(win)) {
+      if (glass_win->frame) {
+        GPU_offscreen_free(glass_win->frame);
+        glass_win->frame = nullptr;
+      }
+    }
+    return;
+  }
+  /* Keep a frosted copy of what was drawn, for the child windows, and let them show it. */
+  if (!wm_draw_glass_capture(win)) {
+    return;
+  }
+  GlassWindow &glass_win = g_windows.lookup_or_add_default(win);
+  gpu::Texture *reduced = GPU_offscreen_color_texture(g_glass.reduced);
+  GPU_texture_filter_mode(reduced, true);
+  ui::glass_frost_copy(reduced, &glass_win.frame, &glass_win.frame_tmp);
+  for (wmWindow &other : wm->windows) {
+    if (other.parent == win) {
+      if (bScreen *screen = WM_window_get_active_screen(&other)) {
+        screen->do_draw = true;
+      }
+    }
   }
 }
 
@@ -110,9 +271,7 @@ void wm_draw_glass_cards(const wmWindow *win)
   }
   bScreen *screen = WM_window_get_active_screen(win);
   /* Same as the editor edges, see #ED_screen_draw_edges. */
-  if (screen->state != SCREENNORMAL ||
-      (screen->areabase.is_single() && win->global_areas.areabase.first == nullptr))
-  {
+  if (!ED_screen_glass_cards_visible(win, screen)) {
     return;
   }
   const int2 win_size = WM_window_native_pixel_size(win);

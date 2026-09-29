@@ -41,6 +41,12 @@ gpu::Texture *wm_draw_region_texture(ARegion *region, int view);
 /** Draw the glass wallpaper behind everything (no-op when the glass style is disabled). */
 void wm_draw_glass_wallpaper(const wmWindow *win);
 /**
+ * Before and after drawing a window: set what is behind it (the wallpaper, or the GlassMesh window
+ * behind a child window), and keep a frosted copy of windows that have child windows.
+ */
+void wm_draw_glass_window_begin(const wmWindowManager *wm, const wmWindow *win);
+void wm_draw_glass_window_end(wmWindowManager *wm, const wmWindow *win);
+/**
  * Draw the editors as panes of glass over the wallpaper (their shadow and body), before the
  * editors themselves. Their edges are drawn afterwards (#ED_screen_draw_edges).
  */

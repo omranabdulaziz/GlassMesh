@@ -325,6 +325,11 @@ void ED_screens_init(bContext *C, Main *bmain, wmWindowManager *wm);
  * Only for edge lines between areas.
  */
 void ED_screen_draw_edges(wmWindow *win);
+/**
+ * GlassMesh: whether the editors of the window are drawn as panes of glass, with the window's
+ * glass around them (all windows except full-screen editors).
+ */
+bool ED_screen_glass_cards_visible(const wmWindow *win, const bScreen *screen);
 
 /**
  * Make this screen usable.

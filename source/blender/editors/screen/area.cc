@@ -2000,9 +2000,11 @@ static void area_calc_totrct(const bScreen *screen, ScrArea *area, const rcti *w
   area->totrct.ymin = area->v1->vec.y;
   area->totrct.ymax = area->v2->vec.y;
 
-  /* Scale down totrct by the border size on all sides not at window edges. */
-  if (!ED_area_is_global(area) && screen->state != SCREENFULL && !(screen->temp) &&
-      !screen->areabase.is_single())
+  /* Scale down totrct by the border size on all sides not at window edges. GlassMesh: all windows
+   * (also with a single editor) have their editors float as glass cards, with the window glass
+   * around them. */
+  if (!ED_area_is_global(area) && screen->state != SCREENFULL &&
+      (use_glass || (!(screen->temp) && !screen->areabase.is_single())))
   {
     area->totrct.xmin += (area->totrct.xmin > window_rect->xmin) ? px : px_edge;
     area->totrct.xmax -= (area->totrct.xmax < (window_rect->xmax - 1)) ? px : px_edge;

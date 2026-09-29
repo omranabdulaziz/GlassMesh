@@ -111,18 +111,27 @@ static void drawscredge_area(const ScrArea &area, float edge_thickness)
   GPU_batch_draw(batch);
 }
 
+bool ED_screen_glass_cards_visible(const wmWindow * /*win*/, const bScreen *screen)
+{
+  return ui::glass_enabled() && screen->state != SCREENFULL;
+}
+
 void ED_screen_draw_edges(wmWindow *win)
 {
   bScreen *screen = WM_window_get_active_screen(win);
   screen->do_draw = false;
 
-  if (screen->state != SCREENNORMAL) {
-    return;
-  }
+  /* GlassMesh: every window shows its editors as glass cards, also the ones with a single editor
+   * (preferences, file browser...). */
+  if (!ED_screen_glass_cards_visible(win, screen)) {
+    if (screen->state != SCREENNORMAL) {
+      return;
+    }
 
-  if (screen->areabase.is_single() && win->global_areas.areabase.first == nullptr) {
-    /* Do not show edges on windows without global areas and with only one editor. */
-    return;
+    if (screen->areabase.is_single() && win->global_areas.areabase.first == nullptr) {
+      /* Do not show edges on windows without global areas and with only one editor. */
+      return;
+    }
   }
 
   ARegion *region = screen->active_region;

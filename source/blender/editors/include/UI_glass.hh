@@ -16,6 +16,11 @@
 #include "DNA_userdef_types.h"
 #include "DNA_vec_types.h"
 
+struct GPUOffScreen;
+namespace blender::gpu {
+class Texture;
+}
+
 namespace blender::ui {
 
 /** True when the glass interface style is enabled in the preferences. */
@@ -77,7 +82,46 @@ void draw_roundbox_4fv_glass(const rctf *rect,
                              float glass_rim,
                              float glass_sheen);
 
-/** Fill the whole window with the frosted glass wallpaper. */
+/**
+ * What lies behind the window being drawn. The window manager sets it for every window it draws
+ * and resets it afterwards, the glass drawing below uses it.
+ */
+struct GlassWindowBackdrop {
+  /** Size of the window in native pixels. */
+  int window_size[2] = {0, 0};
+  /**
+   * Position of the window on the desktop (native pixels from its bottom left corner) and the
+   * size of the desktop. When the desktop size is zero (unknown, for example on Wayland), the
+   * wallpaper covers the window instead of the desktop.
+   */
+  int window_pos[2] = {0, 0};
+  int desktop_size[2] = {0, 0};
+  /**
+   * A frosted image of what is behind the window covering the whole window: another GlassMesh
+   * window with the wallpaper around it (see #glass_backdrop_compose). Null for the wallpaper.
+   */
+  gpu::Texture *behind = nullptr;
+};
+
+/** Set what is behind the window that is drawn next, null when done with it. */
+void glass_window_backdrop_set(const GlassWindowBackdrop *backdrop);
+
+/**
+ * Make \a r_dst a frosted (half size, blurred) copy of \a src, \a r_tmp is a temporary buffer.
+ * Both are (re)created when needed. Returns false on failure.
+ */
+bool glass_frost_copy(gpu::Texture *src, GPUOffScreen **r_dst, GPUOffScreen **r_tmp);
+
+/**
+ * Draw into \a dst (covering the window of the current backdrop) the frosted wallpaper, with
+ * \a window_frame (the frosted copy of another window) at \a frame_rect (window pixels: xmin,
+ * ymin, xmax, ymax) on it: what is behind the window.
+ */
+bool glass_backdrop_compose(GPUOffScreen *dst,
+                            gpu::Texture *window_frame,
+                            const float frame_rect[4]);
+
+/** Fill the whole window with the frosted glass wallpaper (or what is behind the window). */
 void glass_wallpaper_draw(const int window_size[2]);
 
 /**
