@@ -15,6 +15,7 @@
 #include "ED_gizmo_library.hh"
 #include "ED_screen.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface.hh"
 #include "UI_resources.hh"
 
@@ -275,6 +276,25 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
 
   for (int i = 0; i < 3; i++) {
     copy_v3_v3(navgroup->gz_array[GZ_INDEX_ROTATE]->matrix_offset[i], rv3d->viewmat[i]);
+  }
+
+  /* GlassMesh: the navigation buttons sit on small glass discs (invisible until hovered in
+   * Blender). */
+  for (int i = 0; i < GZ_INDEX_TOTAL; i++) {
+    if (i == GZ_INDEX_ROTATE) {
+      continue;
+    }
+    wmGizmo *gz = navgroup->gz_array[i];
+    if (ui::glass_enabled()) {
+      copy_v3_fl(gz->color, 1.0f);
+      gz->color[3] = 0.16f;
+      copy_v3_fl(gz->color_hi, 1.0f);
+      gz->color_hi[3] = 0.3f;
+    }
+    else {
+      gz->color[3] = 0.0f;
+      gz->color_hi[3] = 0.0f;
+    }
   }
 
   const rcti *rect_visible = ED_region_visible_rect(region);

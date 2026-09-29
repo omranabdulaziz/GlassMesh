@@ -15,6 +15,7 @@
 
 #include "BKE_node.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface.hh"
 #include "UI_interface_layout.hh"
 #include "UI_view2d.hh"
@@ -330,7 +331,8 @@ enum NodeResizeDirection {
 ENUM_OPERATORS(NodeResizeDirection);
 
 /* Nodes draw without DPI - the view zoom is flexible. */
-#define BASIS_RAD (0.2f * U.widget_unit)
+/* GlassMesh: rounder nodes with the glass style. */
+#define BASIS_RAD ((blender::ui::glass_enabled() ? 0.32f : 0.2f) * U.widget_unit)
 #define NODE_DYS (U.widget_unit / 2)
 #define NODE_DY U.widget_unit
 #define NODE_ITEM_SPACING_Y (0.1f * U.widget_unit)
