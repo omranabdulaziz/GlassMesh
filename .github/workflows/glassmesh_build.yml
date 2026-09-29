@@ -1,0 +1,206 @@
+# SPDX-FileCopyrightText: 2026 GlassMesh Authors
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# Builds GlassMesh test builds for Linux, macOS and Windows, following the build steps in
+# README.md, and uploads them as downloadable artifacts of the workflow run.
+#
+# - Runs on pushes to the `glassmesh` branch (documentation-only changes are skipped), on tags
+#   starting with `v`, and manually from the "Actions" tab ("Run workflow", which GitHub only
+#   offers once this file is on the repository's default branch).
+# - Builds take a few hours: the first steps download Blender's pre-compiled libraries
+#   (several GB) from projects.blender.org.
+# - The builds are not code-signed. They contain no license checks of any kind.
+
+name: GlassMesh Build
+
+on:
+  push:
+    branches:
+      - glassmesh
+    tags:
+      - "v*"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Platform to build"
+        type: choice
+        default: all
+        options:
+          - all
+          - linux
+          - macos
+          - windows
+
+permissions:
+  contents: read
+
+concurrency:
+  # A newer push replaces a build that is still running for the same branch or tag.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  linux:
+    name: Linux x64
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'linux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force > /dev/null || true
+          df -h /
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential git git-lfs cmake ninja-build gcc-14 g++-14 python3 \
+            libx11-dev libxxf86vm-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev \
+            libegl-dev libwayland-dev wayland-protocols libxkbcommon-dev libdbus-1-dev \
+            linux-libc-dev libdecor-0-dev
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        env:
+          # Git LFS files are downloaded in the next step, from Blender's server (see `.lfsconfig`).
+          GIT_LFS_SKIP_SMUDGE: "1"
+        with:
+          lfs: false
+          fetch-depth: 1
+
+      - name: Download Git LFS files and pre-compiled libraries
+        run: bash tools/glassmesh/ci_fetch.sh
+
+      - name: Build
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: make ninja
+
+      - name: Package
+        run: |
+          name="glassmesh-${GLASSMESH_VERSION}-linux-x64-${GITHUB_SHA::8}"
+          mv ../build_linux/bin "../${name}"
+          tar -C .. -cf - "${name}" | xz -T0 -6 > "${name}.tar.xz"
+          ls -lh "${name}.tar.xz"
+
+      - name: Upload
+        uses: actions/upload-artifact@v5
+        with:
+          name: glassmesh-${{ env.GLASSMESH_VERSION }}-linux-x64
+          path: glassmesh-*.tar.xz
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error
+
+  macos:
+    name: macOS arm64
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'macos'
+    runs-on: macos-15
+    timeout-minutes: 355
+    steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          rm -rf ~/Library/Android/sdk || true
+          df -h /
+
+      - name: Install build tools
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: "1"
+        run: |
+          brew install git-lfs ninja cmake || true
+          git lfs version
+          ninja --version
+          cmake --version
+          xcodebuild -version
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        env:
+          # Git LFS files are downloaded in the next step, from Blender's server (see `.lfsconfig`).
+          GIT_LFS_SKIP_SMUDGE: "1"
+        with:
+          lfs: false
+          fetch-depth: 1
+
+      - name: Download Git LFS files and pre-compiled libraries
+        run: bash tools/glassmesh/ci_fetch.sh
+
+      - name: Build
+        run: make ninja
+
+      - name: Package
+        run: |
+          name="glassmesh-${GLASSMESH_VERSION}-macos-arm64-${GITHUB_SHA::8}"
+          app="../build_darwin/bin/GlassMesh.app"
+          # Ad-hoc signature: not a Developer ID signature, but lets macOS open the app after
+          # confirming in "System Settings > Privacy & Security".
+          codesign --force --deep --sign - "${app}"
+          ditto -c -k --sequesterRsrc --keepParent "${app}" "${name}.zip"
+          ls -lh "${name}.zip"
+
+      - name: Upload
+        uses: actions/upload-artifact@v5
+        with:
+          name: glassmesh-${{ env.GLASSMESH_VERSION }}-macos-arm64
+          path: glassmesh-*.zip
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error
+
+  windows:
+    name: Windows x64
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'windows'
+    runs-on: windows-2025
+    timeout-minutes: 355
+    steps:
+      - name: Configure Git
+        run: git config --system core.longpaths true
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        env:
+          # Git LFS files are downloaded in the next step, from Blender's server (see `.lfsconfig`).
+          GIT_LFS_SKIP_SMUDGE: "1"
+        with:
+          lfs: false
+          fetch-depth: 1
+
+      - name: Download Git LFS files and pre-compiled libraries
+        run: bash tools/glassmesh/ci_fetch.sh
+
+      - name: Build
+        shell: cmd
+        run: call make.bat
+
+      - name: Package
+        run: |
+          name="glassmesh-${GLASSMESH_VERSION}-windows-x64-${GITHUB_SHA::8}"
+          build_dirs=(../build_windows_x64_vc*_Release)
+          build_dir="${build_dirs[0]}"
+          mv "${build_dir}/bin/Release" "../${name}"
+          7z a -tzip -mx=6 -mmt=on "${name}.zip" "../${name}" > /dev/null
+          ls -lh "${name}.zip"
+
+      - name: Upload
+        uses: actions/upload-artifact@v5
+        with:
+          name: glassmesh-${{ env.GLASSMESH_VERSION }}-windows-x64
+          path: glassmesh-*.zip
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error

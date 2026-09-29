@@ -2,6 +2,9 @@
 .*
 # GlassMesh: Git LFS configuration (upstream LFS server).
 !/.lfsconfig
+# GlassMesh: GitHub Actions workflows.
+!/.github/
+!/.github/workflows/
 
 # python temp paths
 __pycache__/
