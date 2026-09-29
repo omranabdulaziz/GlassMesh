@@ -21,6 +21,7 @@
 #include "BLI_rect.h"
 
 #include "DNA_screen_types.h"
+#include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 
 #include "BKE_screen.hh"
@@ -81,6 +82,7 @@ static void glass_offscreen_ensure(GPUOffScreen **offscreen, const int2 &size)
 
 void wm_draw_glass_exit()
 {
+  ui::glass_free_resources();
   if (g_glass.full) {
     GPU_offscreen_free(g_glass.full);
     g_glass.full = nullptr;
@@ -109,6 +111,24 @@ bool wm_draw_glass_region_is_translucent(const ARegion *region)
    * drawn opaque, everything else uses pre-multiplied alpha and can be blended. */
   return region->runtime->draw_buffer && region->runtime->draw_buffer->offscreen &&
          !region->runtime->draw_buffer->viewport;
+}
+
+bool wm_draw_glass_region_is_glass_viewport(const ScrArea *area, const ARegion *region)
+{
+  if (!ui::glass_enabled()) {
+    return false;
+  }
+  /* The 3D viewport leaves its background transparent with the #TH_BACKGROUND_GLASS theme
+   * background (see the overlay engine). Viewports with an opaque background (world, rendered
+   * shading...) simply cover the wallpaper drawn behind them. */
+  return area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_WINDOW &&
+         region->runtime->draw_buffer && region->runtime->draw_buffer->viewport;
+}
+
+void wm_draw_glass_viewport_backdrop(const wmWindow *win, const ARegion *region)
+{
+  const int2 win_size = WM_window_native_pixel_size(win);
+  ui::glass_viewport_backdrop_draw(&region->winrct, win_size);
 }
 
 /** Bind the glass backdrop shader and set everything except the textures. */

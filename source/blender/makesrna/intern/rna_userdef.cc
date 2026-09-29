@@ -1949,6 +1949,12 @@ static const EnumPropertyItem rna_enum_userdef_theme_background_types_items[] = 
      0,
      "Vignette",
      "Use a radial gradient as viewport background"},
+    {TH_BACKGROUND_GLASS,
+     "GLASS",
+     0,
+     "Glass",
+     "Show the glass wallpaper through the viewport background (a linear gradient when the glass "
+     "effect is disabled)"},
     {0, nullptr, 0, nullptr, nullptr},
 };
 
@@ -5616,6 +5622,14 @@ static void rna_def_userdef_view(BlenderRNA *brna)
                            "Blur the content behind translucent headers, toolbars, menus and "
                            "popups. Disable to improve performance on slower graphics cards");
   RNA_def_property_update(prop, 0, "rna_userdef_update");
+
+  prop = RNA_def_property(srna, "glass_wallpaper", PROP_STRING, PROP_FILEPATH);
+  RNA_def_property_string_sdna(prop, nullptr, "glass_wallpaper");
+  RNA_def_property_ui_text(prop,
+                           "Wallpaper",
+                           "Image shown behind the glass interface, for example your desktop "
+                           "wallpaper. Leave empty for the built-in wallpaper");
+  RNA_def_property_update(prop, 0, "rna_userdef_gpu_update");
 
   /* Accessibility. */
   prop = RNA_def_property(srna, "use_reduce_motion", PROP_BOOLEAN, PROP_NONE);

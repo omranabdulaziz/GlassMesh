@@ -42,6 +42,10 @@ gpu::Texture *wm_draw_region_texture(ARegion *region, int view);
 void wm_draw_glass_wallpaper(const wmWindow *win);
 /** A non-viewport region that can be blended (translucent) with the glass style. */
 bool wm_draw_glass_region_is_translucent(const ARegion *region);
+/** A 3D viewport region that is drawn over the glass wallpaper (with pre-multiplied alpha). */
+bool wm_draw_glass_region_is_glass_viewport(const ScrArea *area, const ARegion *region);
+/** Draw the wallpaper behind a region for which #wm_draw_glass_region_is_glass_viewport is true. */
+void wm_draw_glass_viewport_backdrop(const wmWindow *win, const ARegion *region);
 /** A region that should get a frosted (blurred) backdrop. */
 bool wm_draw_glass_region_wants_blur(ARegion *region);
 /**

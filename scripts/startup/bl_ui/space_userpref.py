@@ -239,11 +239,13 @@ class USERPREF_PT_interface_display(InterfacePanel, CenterAlignMixIn, Panel):
         col.separator()
 
         # GlassMesh: glass interface style.
-        col = layout.column(heading="Glass", align=True)
+        col = layout.column(align=True)
         col.prop(view, "use_glass_effect", text="Glass Effect")
-        sub = col.column()
+        sub = col.column(align=True)
         sub.active = view.use_glass_effect
         sub.prop(view, "use_glass_blur", text="Background Blur")
+        sub.separator()
+        sub.prop(view, "glass_wallpaper", text="Wallpaper")
 
         col.separator()
 

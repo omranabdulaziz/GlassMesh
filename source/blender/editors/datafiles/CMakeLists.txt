@@ -1073,8 +1073,9 @@ if(WITH_BLENDER)
     data_to_c_simple(../../../../release/datafiles/preview_grease_pencil.blend SRC)
 
     # Images.
-    # GlassMesh: own splash screen (stored in git, not LFS).
+    # GlassMesh: own splash screen and wallpaper (stored in git, not LFS).
     data_to_c_simple(../../../../release/datafiles/glassmesh/splash.png SRC)
+    data_to_c_simple(../../../../release/datafiles/glassmesh/wallpaper.jpg SRC)
 
     unset(SVG_CONTENTS_H)
     unset(SVG_CONTENTS_C)

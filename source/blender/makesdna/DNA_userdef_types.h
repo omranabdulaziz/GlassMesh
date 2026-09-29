@@ -1232,6 +1232,9 @@ struct UserDef {
   char font_path_ui[/*FILE_MAX*/ 1024] = "";
   char font_path_ui_mono[/*FILE_MAX*/ 1024] = "";
 
+  /** GlassMesh: image drawn behind the glass interface, empty for the built-in wallpaper. */
+  char glass_wallpaper[/*FILE_MAX*/ 1024] = "";
+
   /** Legacy, for backwards compatibility only. */
   int compute_device_type = 0;
 

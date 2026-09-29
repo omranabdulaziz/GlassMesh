@@ -13,33 +13,37 @@ float glass_noise(float2 co)
   return fract(52.9829189f * fract(dot(co, float2(0.06711056f, 0.00583715f))));
 }
 
-/* Large soft blob, `p` and `center` are in aspect corrected [0..1] space. */
-float glass_blob(float2 p, float2 center, float radius)
+float3 glass_sample(float2 uv)
 {
-  float d = length(p - center) / radius;
-  return exp(-d * d * 2.2f);
+  if (blur.x == 0.0f && blur.y == 0.0f) {
+    return textureLod(image, uv, params.x).rgb;
+  }
+  /* 9-tap Gaussian using bilinear filtering (5 fetches). */
+  float2 step = blur.xy;
+  float3 sum = textureLod(image, uv, params.x).rgb * 0.2270270270f;
+  sum += textureLod(image, uv + step * 1.3846153846f, params.x).rgb * 0.3162162162f;
+  sum += textureLod(image, uv - step * 1.3846153846f, params.x).rgb * 0.3162162162f;
+  sum += textureLod(image, uv + step * 3.2307692308f, params.x).rgb * 0.0702702703f;
+  sum += textureLod(image, uv - step * 3.2307692308f, params.x).rgb * 0.0702702703f;
+  return sum;
 }
 
 void main()
 {
-  float2 size = max(window_size.xy, float2(1.0f));
-  float2 p = win_co / size;
-  /* Keep blobs round regardless of the window aspect ratio. */
-  float aspect = size.x / size.y;
-  float2 pa = float2(p.x * aspect, p.y);
+  float2 uv = win_co * uv_transform.xy + uv_transform.zw;
+  float3 color = glass_sample(uv);
 
-  /* Base: vertical gradient, lighter "sky" at the top, deeper "water" at the bottom. */
-  float3 color = mix(color_bottom.rgb, color_top.rgb, smoothstep(0.0f, 1.0f, p.y));
-  /* A soft horizon band. */
-  float horizon = (p.y - 0.58f) * 6.0f;
-  color = mix(color, color_top.rgb * 1.08f, exp(-horizon * horizon) * 0.35f);
-  /* Blobs. */
-  color = mix(color, color_accent1.rgb, glass_blob(pa, float2(0.12f * aspect, 0.82f), 0.55f) * 0.55f);
-  color = mix(color, color_accent2.rgb, glass_blob(pa, float2(0.86f * aspect, 0.22f), 0.60f) * 0.50f);
-  color = mix(color, color_accent1.rgb, glass_blob(pa, float2(0.62f * aspect, 1.05f), 0.45f) * 0.30f);
-  color = mix(color, color_bottom.rgb * 0.8f, glass_blob(pa, float2(0.35f * aspect, -0.1f), 0.5f) * 0.45f);
-  /* Very subtle grain to avoid banding. */
-  color += (glass_noise(win_co) - 0.5f) * (1.5f / 255.0f);
+  if (blur.z != 0.0f) {
+    /* Off-screen pre-processing pass. */
+    fragColor = float4(color, 1.0f);
+    return;
+  }
+
+  float luminance = dot(color, float3(0.2126f, 0.7152f, 0.0722f));
+  color = mix(float3(luminance), color, params.y) * params.z;
+  color = mix(color, tint.rgb, tint.a);
+  /* Grain, also hides banding of the smooth blurred gradients. */
+  color += (glass_noise(win_co) - 0.5f) * params.w;
 
   float alpha = 1.0f;
   if (border_mode) {

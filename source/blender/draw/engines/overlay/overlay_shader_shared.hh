@@ -18,6 +18,8 @@ enum [[host_shared]] OVERLAY_BackgroundType : uint32_t {
   BG_RADIAL = 3u,
   BG_SOLID_CHECKER = 4u,
   BG_MASK = 5u,
+  /* GlassMesh: keep the background transparent, the window draws its wallpaper behind it. */
+  BG_GLASS = 6u,
 };
 
 enum [[host_shared]] OVERLAY_UVLineStyle : uint32_t {

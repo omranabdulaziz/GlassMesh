@@ -199,12 +199,11 @@ void ED_screen_draw_edges(wmWindow *win)
   int verts_per_corner = 0;
   gpu::Batch *batch = batch_screen_edges_get(&verts_per_corner);
 
-  if (use_glass) {
-    /* GlassMesh: the gaps between editors show the glass "wallpaper" instead of a flat color. */
-    const int2 win_size = WM_window_native_pixel_size(win);
-    ui::glass_wallpaper_shader_bind(batch, win_size, true);
-  }
-  else {
+  /* GlassMesh: the gaps between editors show the frosted glass wallpaper instead of a flat
+   * color (the flat color is only a fallback when the wallpaper isn't available). */
+  const int2 win_size = WM_window_native_pixel_size(win);
+  const bool use_wallpaper = use_glass && ui::glass_wallpaper_shader_bind(batch, win_size, true);
+  if (!use_wallpaper) {
     GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_AREA_BORDERS);
     GPU_batch_uniform_4fv(batch, "color", col);
   }
@@ -213,7 +212,7 @@ void ED_screen_draw_edges(wmWindow *win)
   GPU_batch_uniform_1f(batch, "width", shader_width);
 
   for (ScrArea &area : screen->areabase) {
-    drawscredge_area(area, edge_thickness, use_glass);
+    drawscredge_area(area, edge_thickness, use_wallpaper);
   }
 
   float outline1[4];

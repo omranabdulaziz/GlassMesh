@@ -37,7 +37,7 @@ inline bool glass_blur_enabled()
 /** Corner radius of editors (areas), in pixels. */
 inline float glass_editor_radius()
 {
-  return (glass_enabled() ? 12.0f : 6.0f) * UI_SCALE_FAC;
+  return (glass_enabled() ? 16.0f : 6.0f) * UI_SCALE_FAC;
 }
 
 /** Radius of the frosted backdrop blur, in pixels. */
@@ -73,13 +73,29 @@ void draw_roundbox_4fv_glass(const rctf *rect,
                              float glass_sheen);
 
 /**
- * Bind the procedural glass "wallpaper" shader (#GPU_SHADER_2D_GLASS_WALLPAPER) on \a batch and
- * set its colors from the theme. In border mode the caller sets the same geometry uniforms as for
- * #GPU_SHADER_2D_AREA_BORDERS, otherwise `rect_geom` is the quad to fill (window pixels).
+ * Bind the glass wallpaper shader (#GPU_SHADER_2D_GLASS_WALLPAPER) on \a batch, set up to draw the
+ * frosted (blurred and tinted) wallpaper. In border mode the caller sets the same geometry
+ * uniforms as for #GPU_SHADER_2D_AREA_BORDERS, otherwise `rect_geom` is the quad to fill (window
+ * pixels). Returns false if the wallpaper isn't available (nothing is bound then).
  */
-void glass_wallpaper_shader_bind(gpu::Batch *batch, const int window_size[2], bool border_mode);
+bool glass_wallpaper_shader_bind(gpu::Batch *batch, const int window_size[2], bool border_mode);
 
-/** Fill the whole window with the glass wallpaper. */
+/** Fill the whole window with the frosted glass wallpaper. */
 void glass_wallpaper_draw(const int window_size[2]);
+
+/**
+ * Draw the (slightly softened) wallpaper into \a rect (window pixels), behind a 3D viewport that
+ * uses the #TH_BACKGROUND_GLASS theme background.
+ */
+void glass_viewport_backdrop_draw(const rcti *rect, const int window_size[2]);
+
+/**
+ * The approximate color of the frosted window background along the top of the window (sRGB),
+ * for the operating system's title bar. Returns false when the glass style is disabled.
+ */
+bool glass_window_top_color(float r_color[3]);
+
+/** Free the GPU resources of the glass style (needs the GPU context). */
+void glass_free_resources();
 
 }  // namespace blender::ui

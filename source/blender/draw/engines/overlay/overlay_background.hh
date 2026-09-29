@@ -10,6 +10,8 @@
 
 #include "DNA_world_types.h"
 
+#include "UI_glass.hh"
+
 #include "draw_cache.hh"
 
 #include "overlay_base.hh"
@@ -68,6 +70,13 @@ class Background : Overlay {
           break;
         case TH_BACKGROUND_GRADIENT_RADIAL:
           background_type = BG_RADIAL;
+          break;
+        case TH_BACKGROUND_GLASS:
+          /* GlassMesh: transparent background in the interactive viewport, the window draws the
+           * glass wallpaper behind it. Images rendered from the viewport keep a background. */
+          background_type = (ui::glass_enabled() && !state.is_viewport_image_render) ?
+                                BG_GLASS :
+                                BG_GRADIENT;
           break;
         default:
         case TH_BACKGROUND_SINGLE_COLOR:

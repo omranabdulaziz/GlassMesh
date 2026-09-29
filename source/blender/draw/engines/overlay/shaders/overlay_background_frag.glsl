@@ -94,6 +94,10 @@ void main()
     case BG_MASK:
       frag_color = float4(float3(1.0f - alpha), 0.0f);
       return;
+    case BG_GLASS:
+      /* Leave the destination (and its alpha) untouched, see the blend equation above. */
+      frag_color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+      return;
     case BG_SOLID_CHECKER:
       /* Unreachable. */
       assert(false);
