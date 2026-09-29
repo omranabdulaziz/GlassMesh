@@ -118,6 +118,8 @@ struct Layout : public Item, NonCopyable, NonMovable {
   bContextStore *context_ = nullptr;
   Layout *parent_ = nullptr;
   std::string heading_;
+  /** GlassMesh: the layout was created with a heading (#heading_ is cleared once it's added). */
+  bool has_heading_ = false;
 
   Vector<Item *> items_;
 
@@ -727,6 +729,8 @@ struct Layout : public Item, NonCopyable, NonMovable {
   [[nodiscard]] Layout *parent() const;
   [[nodiscard]] StringRef heading() const;
   void heading_reset();
+  /** GlassMesh: true if this layout was created with a heading, even after it was added. */
+  [[nodiscard]] bool has_heading() const;
   [[nodiscard]] Span<Item *> items() const;
   [[nodiscard]] bool align() const;
   [[nodiscard]] bool variable_size() const;

@@ -1721,8 +1721,10 @@ static void icon_draw_size(float x,
     }
 #endif
 
-    /* If the theme is light, we will adjust the icon colors. */
-    const bool invert = (srgb_to_grayscale_byte(btheme->tui.wcol_toolbar_item.inner) > 128);
+    /* If the theme is light, we will adjust the icon colors.
+     * GlassMesh: weighted by the alpha, a mostly transparent (glass) tool button isn't light. */
+    const uchar *toolbar_inner = btheme->tui.wcol_toolbar_item.inner;
+    const bool invert = (srgb_to_grayscale_byte(toolbar_inner) * toolbar_inner[3] > 128 * 255);
     const bool geom_inverted = di->data.geom.inverted;
 
     /* This could re-generate often if rendered at different sizes in the one interface.

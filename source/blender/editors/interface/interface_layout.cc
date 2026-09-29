@@ -39,6 +39,7 @@
 #include "RNA_access.hh"
 #include "RNA_prototypes.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface_layout.hh"
 
 #include "ED_id_management.hh"
@@ -1889,6 +1890,17 @@ static Layout *layout_heading_find(Layout *cur_layout)
   return nullptr;
 }
 
+/** GlassMesh: true if \a cur_layout or one of its parents was created with a heading. */
+static bool layout_has_heading(const Layout *cur_layout)
+{
+  for (const Layout *parent = cur_layout; parent; parent = parent->parent()) {
+    if (parent->has_heading()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static void layout_heading_label_add(Layout *layout,
                                      Layout *heading_layout,
                                      bool right_align,
@@ -2308,6 +2320,15 @@ void Layout::prop(PointerRNA *ptr,
 
     if ((toggle == 1) && but->type == ButtonType::Checkbox) {
       but->type = ButtonType::Toggle;
+    }
+
+    /* GlassMesh: on/off settings in a property split layout are drawn as switches, like a
+     * settings list. Check-boxes grouped under a heading stay check-boxes. */
+    if (use_prop_sep && glass_enabled() && ELEM(but->type, ButtonType::Checkbox, ButtonType::CheckboxN) &&
+        (icon == ICON_NONE) && !icon_only && !name.is_empty() && !is_array &&
+        !layout_has_heading(this))
+    {
+      but->drawflag |= BUT_GLASS_SWITCH;
     }
 
     if (layout->red_alert()) {
@@ -5102,6 +5123,7 @@ Layout &Layout::row(bool align, const StringRef heading)
 {
   Layout &litem = this->row(align);
   litem.heading_ = heading;
+  litem.has_heading_ = !heading.is_empty();
   return litem;
 }
 
@@ -5121,6 +5143,7 @@ Layout &Layout::column(bool align, const StringRef heading)
 {
   Layout &litem = this->column(align);
   litem.heading_ = heading;
+  litem.has_heading_ = !heading.is_empty();
   return litem;
 }
 
@@ -6367,6 +6390,10 @@ StringRef Layout::heading() const
 void Layout::heading_reset()
 {
   heading_ = {};
+}
+bool Layout::has_heading() const
+{
+  return has_heading_;
 }
 Span<Item *> Layout::items() const
 {

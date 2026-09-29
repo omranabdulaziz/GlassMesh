@@ -1278,51 +1278,6 @@ static void panel_glass_overlap_color_get(float r_color[4])
   r_color[3] = std::max(r_color[3], 0.58f);
 }
 
-/** GlassMesh: tool-bars over the viewport float on a rounded glass pill. */
-static void panel_draw_glass_toolbar_backdrop(const ARegion *region, const Block *block)
-{
-  rctf bounds;
-  BLI_rctf_init_minmax(&bounds);
-  for (const Button &but : block->buttons()) {
-    if (ELEM(but.type, ButtonType::Sepr, ButtonType::SeprLine, ButtonType::SeprSpacer)) {
-      continue;
-    }
-    BLI_rctf_union(&bounds, &but.rect);
-  }
-  if (!BLI_rctf_is_valid(&bounds)) {
-    return;
-  }
-
-  const rcti bounds_px = rect_to_pixelrect(region, block, &bounds);
-  const float pad = 3.0f * UI_SCALE_FAC;
-  rctf box_rect;
-  BLI_rctf_rcti_copy(&box_rect, &bounds_px);
-  BLI_rctf_pad(&box_rect, pad, pad);
-  /* Stay inside the region, it is clipped otherwise. */
-  box_rect.xmin = std::max(box_rect.xmin, 1.0f);
-  box_rect.xmax = std::min(box_rect.xmax, float(region->winx - 1));
-
-  float color[4];
-  panel_glass_overlap_color_get(color);
-  const float radius = std::min(0.5f * BLI_rctf_size_x(&box_rect), 12.0f * UI_SCALE_FAC);
-
-  GPU_blend(GPU_BLEND_ALPHA);
-  draw_roundbox_corner_set(CNR_ALL);
-  draw_dropshadow(&box_rect, radius, float(theme::get_menu_shadow_width()), 1.0f, 0.25f);
-  float outline[4];
-  theme::get_color_4fv(TH_PANEL_OUTLINE, outline);
-  draw_roundbox_4fv_glass(&box_rect,
-                          color,
-                          nullptr,
-                          1.0f,
-                          outline,
-                          U.pixelsize,
-                          radius,
-                          glass_rim_strength() * 1.3f,
-                          0.0f);
-  GPU_blend(GPU_BLEND_NONE);
-}
-
 static void panel_draw_aligned_backdrop(const ARegion *region,
                                         const Panel *panel,
                                         const rcti *rect,
@@ -1374,8 +1329,12 @@ static void panel_draw_aligned_backdrop(const ARegion *region,
     draw_roundbox_4fv(&box_rect, true, radius, glass_color);
   }
 
+  /* GlassMesh: top-level panels are one glass card, the backdrop also covers the header (the
+   * header color is drawn over it). */
+  const bool glass_card = glass_enabled() && !is_subpanel && has_header;
+
   /* Panel backdrop. */
-  if (is_open || !has_header) {
+  if (is_open || !has_header || glass_card) {
     float panel_backcolor[4];
     draw_roundbox_corner_set(is_open ? CNR_BOTTOM_RIGHT | CNR_BOTTOM_LEFT : CNR_ALL);
     if (!has_header) {
@@ -1391,11 +1350,18 @@ static void panel_draw_aligned_backdrop(const ARegion *region,
     box_rect.xmax = rect->xmax - padding;
     box_rect.ymin = rect->ymin + padding;
     box_rect.ymax = rect->ymax;
+    if (glass_card) {
+      draw_roundbox_corner_set(CNR_ALL);
+      box_rect.ymin = is_open ? rect->ymin : header_rect->ymin;
+      box_rect.ymax = header_rect->ymax;
+    }
     draw_roundbox_4fv(&box_rect, true, radius, panel_backcolor);
 
-    float subpanel_backcolor[4];
-    theme::get_color_4fv(TH_PANEL_SUB_BACK, subpanel_backcolor);
-    draw_layout_panels_backdrop(region, panel, radius, subpanel_backcolor);
+    if (is_open || !has_header) {
+      float subpanel_backcolor[4];
+      theme::get_color_4fv(TH_PANEL_SUB_BACK, subpanel_backcolor);
+      draw_layout_panels_backdrop(region, panel, radius, subpanel_backcolor);
+    }
   }
 
   /* Panel header backdrops for non sub-panels. */
@@ -1443,12 +1409,6 @@ void draw_aligned_panel(const ARegion *region,
 
   if (show_background || (panel->type->flag & PANEL_TYPE_NO_HEADER)) {
     panel_draw_aligned_backdrop(region, panel, rect, &header_rect);
-  }
-
-  if (glass_enabled() && region->overlap && region->regiontype == RGN_TYPE_TOOLS &&
-      (panel->type->flag & PANEL_TYPE_NO_HEADER))
-  {
-    panel_draw_glass_toolbar_backdrop(region, block);
   }
 
   /* Draw the widgets and text in the panel header. */

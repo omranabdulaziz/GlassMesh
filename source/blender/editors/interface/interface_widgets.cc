@@ -4958,12 +4958,87 @@ static void widget_preview_tile(Button *but,
                               !(but->drawflag & BUT_NO_PREVIEW_PADDING));
 }
 
+/**
+ * GlassMesh: an on/off switch at the right end of the button, the text stays on its left
+ * (see #BUT_GLASS_SWITCH). Returns false if the button is too narrow for a switch.
+ */
+static bool widget_optionbut_switch(uiWidgetColors *wcol, rcti *rect, const WidgetStateInfo *state)
+{
+  const int height = BLI_rcti_size_y(rect);
+  const int track_h = max_ii(int(8.0f * UI_SCALE_FAC), int(float(height) * 0.72f));
+  const int track_w = int(float(track_h) * 1.75f);
+  const int margin = int(2.0f * UI_SCALE_FAC);
+  if (BLI_rcti_size_x(rect) < track_w + 2 * margin) {
+    return false;
+  }
+
+  rcti track;
+  track.xmax = rect->xmax - margin;
+  track.xmin = track.xmax - track_w;
+  track.ymin = rect->ymin + (height - track_h) / 2;
+  track.ymax = track.ymin + track_h;
+
+  const bool is_indeterminate = (state->but_drawflag & BUT_INDETERMINATE) != 0;
+  const bool is_on = (state->but_flag & UI_SELECT) != 0 && !is_indeterminate;
+
+  /* Track: the checkbox colors (the accent when on), a bit more visible when off. */
+  uiWidgetColors track_col = *wcol;
+  if (!is_on) {
+    track_col.inner[3] = std::max(track_col.inner[3], uchar(72));
+  }
+  WidgetBase wtb_track;
+  widget_init(&wtb_track);
+  wtb_track.draw_emboss = false;
+  round_box_edges(&wtb_track, CNR_ALL, &track, 0.5f * float(track_h));
+  widgetbase_draw(&wtb_track, &track_col);
+
+  /* Knob: a white disc, on the right when on. */
+  const int pad = max_ii(1, int(2.0f * UI_SCALE_FAC));
+  const int knob_d = track_h - 2 * pad;
+  rcti knob;
+  knob.ymin = track.ymin + pad;
+  knob.ymax = knob.ymin + knob_d;
+  if (is_indeterminate) {
+    knob.xmin = (track.xmin + track.xmax - knob_d) / 2;
+  }
+  else if (is_on) {
+    knob.xmin = track.xmax - pad - knob_d;
+  }
+  else {
+    knob.xmin = track.xmin + pad;
+  }
+  knob.xmax = knob.xmin + knob_d;
+
+  uiWidgetColors knob_col = *wcol;
+  const uchar knob_inner[4] = {255, 255, 255, 245};
+  const uchar knob_outline[4] = {0, 0, 0, 45};
+  copy_v4_v4_uchar(knob_col.inner, knob_inner);
+  copy_v4_v4_uchar(knob_col.outline, knob_outline);
+  knob_col.shaded = 0;
+  WidgetBase wtb_knob;
+  widget_init(&wtb_knob);
+  wtb_knob.draw_emboss = false;
+  widget_glass_set(&wtb_knob, 0.0f, 0.0f);
+  round_box_edges(&wtb_knob, CNR_ALL, &knob, 0.5f * float(knob_d));
+  widgetbase_draw(&wtb_knob, &knob_col);
+
+  /* The text goes on the left. */
+  rect->xmax = track.xmin - int(4.0f * UI_SCALE_FAC);
+  return true;
+}
+
 static void widget_optionbut(uiWidgetColors *wcol,
                              rcti *rect,
                              const WidgetStateInfo *state,
                              int /*roundboxalign*/,
                              const float /*zoom*/)
 {
+  if ((state->but_drawflag & BUT_GLASS_SWITCH) && glass_enabled() &&
+      widget_optionbut_switch(wcol, rect, state))
+  {
+    return;
+  }
+
   /* For a right aligned layout (signified by #BUT_TEXT_RIGHT), draw the text on the left of the
    * checkbox. */
   const bool text_before_widget = (state->but_drawflag & BUT_TEXT_RIGHT);
@@ -5166,6 +5241,29 @@ static void widget_roundbut_exec(Button *but,
   widgetbase_draw(&wtb, wcol);
 }
 
+/**
+ * GlassMesh: every tool of a tool-bar is its own small rounded glass tile, instead of tools being
+ * joined into one column.
+ */
+static void widget_toolbar_item(Button *but,
+                                uiWidgetColors *wcol,
+                                rcti *rect,
+                                const WidgetStateInfo *state,
+                                int roundboxalign,
+                                const float zoom)
+{
+  if (!glass_enabled() || (but->block->flag & BLOCK_POPOVER)) {
+    widget_roundbut_exec(but, wcol, rect, state, roundboxalign, zoom);
+    return;
+  }
+  rcti rect_tile = *rect;
+  const int inset = int(2.0f * UI_SCALE_FAC * zoom);
+  if (BLI_rcti_size_x(&rect_tile) > 4 * inset && BLI_rcti_size_y(&rect_tile) > 4 * inset) {
+    BLI_rcti_pad(&rect_tile, -inset, -inset);
+  }
+  widget_roundbut_exec(but, wcol, &rect_tile, state, CNR_ALL, zoom * 1.6f);
+}
+
 static void widget_tab(Button *but,
                        uiWidgetColors *wcol,
                        rcti *rect,
@@ -5324,7 +5422,7 @@ static WidgetType *widget_type(WidgetStyle type)
 
     case WidgetStyle::ToolbarItem:
       wt.wcol_theme = &btheme->tui.wcol_toolbar_item;
-      wt.custom = widget_roundbut_exec;
+      wt.custom = widget_toolbar_item;
       break;
 
     case WidgetStyle::Tab:

@@ -73,6 +73,7 @@
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface.hh"
 #include "UI_interface_icons.hh"
 #include "UI_resources.hh"
@@ -3780,8 +3781,9 @@ static void outliner_draw_highlights(const ARegion *region,
     const int start_y = *io_start_y;
 
     const float ufac = UI_UNIT_X / 20.0f;
-    const float radius = UI_UNIT_Y / 8.0f;
-    const int padding_x = 3 * UI_SCALE_FAC;
+    /* GlassMesh: rows are highlighted with rounded pills. */
+    const float radius = ui::glass_enabled() ? UI_UNIT_Y * 0.3f : UI_UNIT_Y / 8.0f;
+    const int padding_x = (ui::glass_enabled() ? 5 : 3) * UI_SCALE_FAC;
     rctf rect{};
     BLI_rctf_init(&rect,
                   padding_x,

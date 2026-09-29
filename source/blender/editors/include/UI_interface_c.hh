@@ -521,6 +521,9 @@ enum {
 
   /** Draw icon inverted to indicate a special state. */
   BUT_ICON_INVERT = 1 << 27,
+
+  /** GlassMesh: draw a check-box as an on/off switch, at the right end of the button. */
+  BUT_GLASS_SWITCH = 1 << 28,
 };
 
 enum class ButPointerType : uint8_t {
