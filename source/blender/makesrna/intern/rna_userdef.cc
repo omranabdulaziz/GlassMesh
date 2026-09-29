@@ -5600,6 +5600,23 @@ static void rna_def_userdef_view(BlenderRNA *brna)
   RNA_def_property_ui_text(prop, "Extensions Updates", "Show Extensions Update Count");
   RNA_def_property_update(prop, NC_SPACE | ND_SPACE_INFO, "rna_userdef_update");
 
+  /* GlassMesh: glass interface style. */
+  prop = RNA_def_property(srna, "use_glass_effect", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_boolean_negative_sdna(prop, nullptr, "glass_flag", USER_GLASS_DISABLE);
+  RNA_def_property_ui_text(prop,
+                           "Glass Effect",
+                           "Draw the interface with translucent frosted-glass editors, panels, "
+                           "menus and headers. Disable for the classic opaque interface");
+  RNA_def_property_update(prop, 0, "rna_userdef_gpu_update");
+
+  prop = RNA_def_property(srna, "use_glass_blur", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_boolean_negative_sdna(prop, nullptr, "glass_flag", USER_GLASS_NO_BLUR);
+  RNA_def_property_ui_text(prop,
+                           "Glass Blur",
+                           "Blur the content behind translucent headers, toolbars, menus and "
+                           "popups. Disable to improve performance on slower graphics cards");
+  RNA_def_property_update(prop, 0, "rna_userdef_update");
+
   /* Accessibility. */
   prop = RNA_def_property(srna, "use_reduce_motion", PROP_BOOLEAN, PROP_NONE);
   RNA_def_property_boolean_sdna(prop, nullptr, "uiflag", USER_REDUCE_MOTION);

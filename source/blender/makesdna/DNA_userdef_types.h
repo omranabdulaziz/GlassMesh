@@ -191,6 +191,20 @@ enum eUserpref_UI_Flag2 : char {
 };
 ENUM_OPERATORS(eUserpref_UI_Flag2)
 
+/**
+ * #UserDef.glass_flag
+ *
+ * GlassMesh: settings for the translucent "glass" interface style.
+ * Flags are "negative" so that zero-initialized preferences keep the effect enabled.
+ */
+enum eUserpref_Glass_Flag : char {
+  /** Draw the classic opaque interface instead of the glass style. */
+  USER_GLASS_DISABLE = (1 << 0),
+  /** Keep translucency but skip the (more expensive) backdrop blur. */
+  USER_GLASS_NO_BLUR = (1 << 1),
+};
+ENUM_OPERATORS(eUserpref_Glass_Flag)
+
 /** #UserDef.gpu_flag */
 enum eUserpref_GPU_Flag : char {
   USER_GPU_FLAG_UNUSED_0 = (1 << 0), /* Unused. To be removed. */
@@ -971,7 +985,9 @@ struct UserDef {
   /* date_string::TimeFormat */
   char time_format = 0;
 
-  char _pad8[4] = {};
+  /** GlassMesh: #eUserpref_Glass_Flag. */
+  eUserpref_Glass_Flag glass_flag = eUserpref_Glass_Flag(0);
+  char _pad8[3] = {};
   /* Experimental flag for app-templates to make changes to behavior
    * which are outside the scope of typical preferences. */
   eUserpref_APP_Flag app_flag = {};
