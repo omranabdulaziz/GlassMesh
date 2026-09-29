@@ -116,3 +116,4 @@ scripts/modules/_bpy_internal/assets/remote_library/*_openapi.py linguist-genera
 # which does not have these files.
 release/datafiles/glassmesh/*.png -filter binary
 release/darwin/Blender.app/Contents/Resources/glassmesh_icon.icns -filter binary
+docs/glassmesh/*.jpg -filter binary
