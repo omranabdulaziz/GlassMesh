@@ -1135,6 +1135,9 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
   GPU_clear_color(0, 0, 0, 0);
 #endif
 
+  /* GlassMesh: wallpaper behind (translucent) editors and in the gaps between them. */
+  wm_draw_glass_wallpaper(win);
+
   /* Blit non-overlapping area regions. */
   ED_screen_areas_iter (win, screen, area) {
     for (ARegion &region : area->regionbase) {
@@ -1143,8 +1146,14 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
       }
 
       if (region.overlap == false) {
-        /* Blit from off-screen buffer. */
-        wm_draw_region_blit(&region, view);
+        if (wm_draw_glass_region_is_translucent(&region)) {
+          /* GlassMesh: blend translucent editors over the wallpaper. */
+          wm_draw_region_blend(&region, 0, true);
+        }
+        else {
+          /* Blit from off-screen buffer. */
+          wm_draw_region_blit(&region, view);
+        }
       }
     }
   }
@@ -1177,12 +1186,23 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
   wmWindowViewport(win);
 
   /* Blend in overlapping area regions. */
+  bool glass_captured = false;
   ED_screen_areas_iter (win, screen, area) {
     for (ARegion &region : area->regionbase) {
       if (!region.runtime->visible) {
         continue;
       }
       if (region.overlap) {
+        /* GlassMesh: frosted backdrop behind translucent overlapping regions. Overlapping regions
+         * don't overlap each other, so a single capture of the window is enough. */
+        if (wm_draw_glass_region_wants_blur(&region)) {
+          if (!glass_captured) {
+            glass_captured = wm_draw_glass_capture(win);
+          }
+          if (glass_captured) {
+            wm_draw_glass_backdrop(win, &region);
+          }
+        }
         wm_draw_region_blend(&region, 0, true);
       }
     }
@@ -1202,6 +1222,11 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
   for (ARegion &region : screen->regionbase) {
     if (!region.runtime->visible) {
       continue;
+    }
+    /* GlassMesh: frosted backdrop behind menus and popups. Capture again for every floating
+     * region, so stacked menus blur the menus below them. */
+    if (wm_draw_glass_region_wants_blur(&region) && wm_draw_glass_capture(win)) {
+      wm_draw_glass_backdrop(win, &region);
     }
     wm_draw_region_blend(&region, 0, true);
   }

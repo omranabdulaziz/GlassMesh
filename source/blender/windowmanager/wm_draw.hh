@@ -36,4 +36,22 @@ void wm_draw_region_test(bContext *C, ScrArea *area, ARegion *region);
 
 gpu::Texture *wm_draw_region_texture(ARegion *region, int view);
 
+/* `wm_draw_glass.cc` (GlassMesh) */
+
+/** Draw the glass wallpaper behind everything (no-op when the glass style is disabled). */
+void wm_draw_glass_wallpaper(const wmWindow *win);
+/** A non-viewport region that can be blended (translucent) with the glass style. */
+bool wm_draw_glass_region_is_translucent(const ARegion *region);
+/** A region that should get a frosted (blurred) backdrop. */
+bool wm_draw_glass_region_wants_blur(ARegion *region);
+/**
+ * Copy the currently bound (window) frame-buffer into the glass backdrop textures.
+ * \return false when the backdrop is not available (blur disabled or allocation failure).
+ */
+bool wm_draw_glass_capture(const wmWindow *win);
+/** Draw the frosted backdrop for \a region, using the last capture. */
+void wm_draw_glass_backdrop(const wmWindow *win, ARegion *region);
+/** Free GPU resources, the GPU context must be active. */
+void wm_draw_glass_exit();
+
 }  // namespace blender

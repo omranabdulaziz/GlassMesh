@@ -79,6 +79,7 @@
 
 #include "wm.hh"
 #include "wm_cursors.hh"
+#include "wm_draw.hh"
 #include "wm_event_system.hh"
 #include "wm_files.hh"
 #include "wm_platform_support.hh"
@@ -673,6 +674,7 @@ void WM_exit_ex(bContext *C, const bool do_python_exit, const bool do_user_exit_
    * is also deleted with the context active. */
   if (gpu_is_init) {
     DRW_gpu_context_enable_ex(false);
+    wm_draw_glass_exit();
     ui::exit();
     GPU_shader_cache_dir_clear_old();
     GPU_exit();

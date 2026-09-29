@@ -99,15 +99,21 @@ static gpu::Batch *batch_screen_edges_get(int *corner_len)
 /**
  * \brief Screen edges drawing.
  */
-static void drawscredge_area(const ScrArea &area, float edge_thickness)
+static void drawscredge_area(const ScrArea &area, float edge_thickness, const bool use_glass)
 {
   rctf rect;
   BLI_rctf_rcti_copy(&rect, &area.totrct);
   BLI_rctf_pad(&rect, edge_thickness, edge_thickness);
 
   gpu::Batch *batch = batch_screen_edges_get(nullptr);
-  GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_AREA_BORDERS);
-  GPU_batch_uniform_4fv(batch, "rect", (float *)&rect);
+  if (use_glass) {
+    /* The program is already bound by the caller (#GPU_SHADER_2D_GLASS_WALLPAPER). */
+    GPU_batch_uniform_4fv(batch, "rect_geom", (float *)&rect);
+  }
+  else {
+    GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_AREA_BORDERS);
+    GPU_batch_uniform_4fv(batch, "rect", (float *)&rect);
+  }
   GPU_batch_draw(batch);
 }
 
@@ -177,26 +183,37 @@ void ED_screen_draw_edges(wmWindow *win)
   ui::theme::get_color_4fv(TH_EDITOR_BORDER, col);
 
   const float edge_thickness = float(U.border_width) * UI_SCALE_FAC;
+  const bool use_glass = ui::glass_enabled();
 
   /* Entire width of the evaluated outline as far as the shader is concerned. */
   const float shader_scale = edge_thickness + EDITORRADIUS;
   const float corner_coverage[10] = {
       0.144f, 0.25f, 0.334f, 0.40f, 0.455, 0.5, 0.538, 0.571, 0.6, 0.625f};
-  const float shader_width = corner_coverage[U.border_width - 1];
+  /* The table above is `border_width / (border_width + 6)`, GlassMesh uses a larger (variable)
+   * corner radius so compute it. */
+  const float shader_width = use_glass ? edge_thickness / shader_scale :
+                                         corner_coverage[U.border_width - 1];
 
   GPU_blend(GPU_BLEND_ALPHA);
 
   int verts_per_corner = 0;
   gpu::Batch *batch = batch_screen_edges_get(&verts_per_corner);
 
-  GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_AREA_BORDERS);
+  if (use_glass) {
+    /* GlassMesh: the gaps between editors show the glass "wallpaper" instead of a flat color. */
+    const int2 win_size = WM_window_native_pixel_size(win);
+    ui::glass_wallpaper_shader_bind(batch, win_size, true);
+  }
+  else {
+    GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_AREA_BORDERS);
+    GPU_batch_uniform_4fv(batch, "color", col);
+  }
   GPU_batch_uniform_1i(batch, "cornerLen", verts_per_corner);
   GPU_batch_uniform_1f(batch, "scale", shader_scale);
   GPU_batch_uniform_1f(batch, "width", shader_width);
-  GPU_batch_uniform_4fv(batch, "color", col);
 
   for (ScrArea &area : screen->areabase) {
-    drawscredge_area(area, edge_thickness);
+    drawscredge_area(area, edge_thickness, use_glass);
   }
 
   float outline1[4];
@@ -207,16 +224,20 @@ void ED_screen_draw_edges(wmWindow *win)
   ui::theme::get_color_4fv(TH_EDITOR_OUTLINE, outline1);
   ui::theme::get_color_4fv(TH_EDITOR_OUTLINE_ACTIVE, outline2);
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  /* GlassMesh: editors are glass panes with a bright rim along their edges. */
+  const float glass_rim = ui::glass_rim_strength() * 1.6f;
   for (ScrArea &area : screen->areabase) {
     BLI_rctf_rcti_copy(&bounds, &area.totrct);
     BLI_rctf_pad(&bounds, padding, padding);
-    ui::draw_roundbox_4fv_ex(&bounds,
-                             nullptr,
-                             nullptr,
-                             1.0f,
-                             (&area == active_area) ? outline2 : outline1,
-                             U.pixelsize,
-                             EDITORRADIUS);
+    ui::draw_roundbox_4fv_glass(&bounds,
+                                nullptr,
+                                nullptr,
+                                1.0f,
+                                (&area == active_area) ? outline2 : outline1,
+                                U.pixelsize,
+                                EDITORRADIUS,
+                                glass_rim,
+                                0.0f);
   }
 
   GPU_blend(GPU_BLEND_NONE);

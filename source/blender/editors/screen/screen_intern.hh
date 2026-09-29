@@ -10,6 +10,8 @@
 
 #include "DNA_space_types.h"
 
+#include "UI_glass.hh"
+
 namespace blender {
 
 struct ARegion;
@@ -80,8 +82,9 @@ enum class AreaDockTarget {
 
 /**
  * Number of pixels of the area border corner radius.
+ * GlassMesh: larger with the glass interface style, see #ui::glass_editor_radius.
  */
-#define EDITORRADIUS (6.0f * UI_SCALE_FAC)
+#define EDITORRADIUS (ui::glass_editor_radius())
 
 /* Less expansion needed for global edges. */
 #define BORDERPADDING_GLOBAL (3.0f * UI_SCALE_FAC)
