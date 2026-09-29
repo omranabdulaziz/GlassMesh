@@ -1,4 +1,9 @@
-This repository is only used as a mirror. Blender development happens on projects.blender.org.
+Thanks for contributing to GlassMesh, an unofficial fork of Blender!
 
-To get started with contributing code, please see:
-https://developer.blender.org/docs/handbook/contributing/
+- GlassMesh only changes Blender's look and branding. Please keep pull requests to that scope.
+- Changes that are not specific to GlassMesh belong in Blender itself, see
+  https://developer.blender.org/docs/handbook/contributing/
+
+**What does this change, and why?**
+
+**How was it tested?** (platform, GPU backend, screenshots for visual changes)
