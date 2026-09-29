@@ -56,9 +56,13 @@ sharper and faster). The viewports show Blender's default scenes on a neutral ba
   corners for glass widgets.
 - `GPU_shader_builtin.hh`, `intern/gpu_shader_builtin.cc`, `CMakeLists.txt` – registration.
 
-**3D viewport** (`source/blender/draw/engines/overlay/`) – content stays opaque (the see-through
-background of test builds was removed: `TH_BACKGROUND_GLASS_LEGACY` in `DNA_theme_types.h` and
-`blenloader/intern/versioning_userdef.cc` turn it into a gradient).
+**3D viewport, image and node editors** (`source/blender/draw/engines/overlay/`) – the 3D viewport
+stays opaque (the see-through background of test builds was removed: `TH_BACKGROUND_GLASS_LEGACY`
+in `DNA_theme_types.h` and `blenloader/intern/versioning_userdef.cc` turn it into a gradient).
+
+- `overlay_background.hh`, `overlay_shader_shared.hh`, `shaders/overlay_background_frag.glsl` –
+  `BG_GLASS_CHECKER`: frosted glass around the image in the image editor.
+- `editors/space_node/node_draw.cc` – the node canvas clears with the theme alpha (frosted).
 
 - `overlay_grid.hh`, `overlay_shader_shared.hh`, `shaders/overlay_grid_frag.glsl` – `GRID_GLASS`:
   translucent grid colors aren't drawn dashed, and the floor grid fades out sooner towards the
@@ -67,7 +71,8 @@ background of test builds was removed: `TH_BACKGROUND_GLASS_LEGACY` in `DNA_them
 **Window compositing** (`source/blender/windowmanager/`)
 
 - `intern/wm_draw_glass.cc` (new) – window capture and live blurred backdrop per region, the
-  editors' glass cards (shadows and bodies) before the editors are drawn, and what is behind each
+  editors' glass cards (shadows and bodies) before the editors are drawn, the frosted node canvas,
+  image editor surround and sequencer timeline, and what is behind each
   window (a frosted copy of the parent window for child windows, the wallpaper on the desktop).
 - `intern/wm_draw.cc` – draws the frosted window background and the glass cards, blends
   translucent editors over them, and draws the live frosted backdrop under overlapping regions
@@ -86,7 +91,8 @@ background of test builds was removed: `TH_BACKGROUND_GLASS_LEGACY` in `DNA_them
 - `interface/interface_panel.cc` – panels as glass cards, panel rims, headerless panels on glass.
 - `interface/interface_button_sections.cc` – header button groups as floating glass pills.
 - `interface/interface_icons.cc` – tool icons aren't inverted for translucent tool buttons.
-- `interface/resources.cc` – translucent (pre-multiplied) region background clears with glass.
+- `interface/resources.cc`, `include/UI_resources.hh` – translucent (pre-multiplied) region
+  background clears with glass, glass for side-bars that don't overlap, `get_color_back_glass_4fv()`.
 - `screen/screen_draw.cc`, `screen/screen_intern.hh` – the editors' glass edges (rounded corners
   and specular rim) instead of the flat gaps, larger corner radius.
 - `screen/area.cc` – margins around the glass cards at the window edges and below the top bar,
@@ -94,6 +100,7 @@ background of test builds was removed: `TH_BACKGROUND_GLASS_LEGACY` in `DNA_them
 - `include/ED_screen.hh` – `ED_screen_glass_cards_visible()`.
 - `interface/interface.cc` – the glass capsule behind the top bar's workspace tabs.
 - `space_file/file_draw.cc` – translucent rows and column header in the file browser.
+- `space_spreadsheet/spreadsheet_draw.cc` – translucent header row and index column.
 - `space_outliner/outliner_draw.cc` – pill shaped row highlights, no row stripes with glass.
 - `space_view3d/view3d_gizmo_navigate.cc` – glass circles behind the navigation buttons.
 - `space_node/node_intern.hh`, `space_node/node_draw.cc` – rounder node corners and a glass rim

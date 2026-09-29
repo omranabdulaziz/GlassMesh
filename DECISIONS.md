@@ -341,3 +341,13 @@ that looked squashed instead of being squircles, and windows should show what is
     mistake gives an invisible or black window. None of it can be run in the environment
     GlassMesh is developed in (no compositor, no Mac or Windows), so it was left for a pass that
     can be tested on each system. The wallpaper stays the stand-in for the desktop.
+77. **No unneeded opaque areas.** Side-bars that don't overlap their editor (the preferences
+    navigation, the file browser's side-bar and bottom bar, the graph and text editors' side-bars)
+    were opaque by accident: the side-bar theme color is kept clear for side-bars over the 3D
+    viewport, and a clear color is treated as "opaque" for older themes. With glass they are the
+    same glass as their editor. The spreadsheet's header row and index column are a light veil.
+78. **Frosted where clear glass would hurt** (revisits #64). The node canvas (85%), the area around
+    images in the image editor (80%, nearly neutral, the image itself stays opaque) and the
+    sequencer timeline are frosted glass instead of opaque. Text editor and console (72%),
+    tooltips (78%), asset shelf (50%), channel lists (36%) and frame rulers (40%) are lighter than
+    before. The 3D viewport and the sequencer preview stay opaque, their colors must be right.
