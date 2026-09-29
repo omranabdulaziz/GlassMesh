@@ -51,6 +51,8 @@
 #include "GPU_state.hh"
 #include "GPU_uniform_buffer.hh"
 
+#include "UI_glass.hh"
+
 /* own include */
 #include "interface_intern.hh"
 
@@ -80,6 +82,19 @@ void draw_roundbox_4fv_ex(const rctf *rect,
                           float outline_width,
                           float rad)
 {
+  draw_roundbox_4fv_glass(rect, inner1, inner2, shade_dir, outline, outline_width, rad, 0.0f, 0.0f);
+}
+
+void draw_roundbox_4fv_glass(const rctf *rect,
+                             const float inner1[4],
+                             const float inner2[4],
+                             float shade_dir,
+                             const float outline[4],
+                             float outline_width,
+                             float rad,
+                             float glass_rim,
+                             float glass_sheen)
+{
   /* WATCH: This is assuming the ModelViewProjectionMatrix is area pixel space.
    * If it has been scaled, then it's no longer valid. */
   WidgetBaseParameters widget_params{};
@@ -108,10 +123,15 @@ void draw_roundbox_4fv_ex(const rctf *rect,
   widget_params.color_outline[3] = outline ? outline[3] : inner1 ? inner1[3] : 0.0f;
   widget_params.shade_dir = shade_dir;
   widget_params.alpha_discard = 1.0f;
+  /* GlassMesh: rim highlight and sheen (zero for regular round-boxes). */
+  widget_params.glass_rim = glass_rim;
+  widget_params.glass_sheen = glass_sheen;
 
   gpu::Batch *batch = batch_roundbox_widget_get();
   GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_WIDGET_BASE);
-  GPU_batch_uniform_4fv_array(batch, "parameters", 11, (const float (*)[4]) & widget_params);
+  /* All 12 parameters are uploaded (the last one holds the glass settings), so values from a
+   * previous widget draw-call can't leak into this one. */
+  GPU_batch_uniform_4fv_array(batch, "parameters", 12, (const float (*)[4]) & widget_params);
   const GPUBlend old_blend = GPU_blend_get();
   GPU_blend(GPU_BLEND_ALPHA);
   GPU_batch_draw(batch);

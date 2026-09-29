@@ -36,6 +36,7 @@
 
 #include "ED_node.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface_icons.hh"
 #include "UI_view2d.hh"
 
@@ -609,6 +610,21 @@ static void widget_init(WidgetBase *wtb)
 
   wtb->uniform_params.shade_dir = 1.0f;
   wtb->uniform_params.alpha_discard = 1.0f;
+
+  /* GlassMesh: every widget gets a subtle rim highlight and sheen by default. */
+  wtb->uniform_params.glass_rim = glass_rim_strength();
+  wtb->uniform_params.glass_sheen = glass_sheen_strength();
+  wtb->uniform_params._pad = 0.0f;
+}
+
+/**
+ * GlassMesh: scale the glass highlights of a widget, 0 disables them.
+ * Used for widgets that are drawn in multiple passes, or that should stay flat.
+ */
+static void widget_glass_set(WidgetBase *wtb, const float rim_fac, const float sheen_fac)
+{
+  wtb->uniform_params.glass_rim = glass_rim_strength() * rim_fac;
+  wtb->uniform_params.glass_sheen = glass_sheen_strength() * sheen_fac;
 }
 
 /** \} */
@@ -1197,6 +1213,12 @@ static void widgetbase_draw(WidgetBase *wtb, const uiWidgetColors *wcol)
     tria_col[3] = wcol->item[3];
   }
 
+  /* GlassMesh: the highlights belong to the body of the widget, skip them for passes that only
+   * draw the outline (or invisible bodies), so multi-pass widgets don't stack them. */
+  if (!wtb->draw_inner || (inner_col1[3] == 0 && inner_col2[3] == 0)) {
+    widget_glass_set(wtb, 0.0f, 0.0f);
+  }
+
   /* Draw everything in one draw-call. */
   if (inner_col1[3] || inner_col2[3] || outline_col[3] || emboss_col[3] || tria_col[3]) {
     widgetbase_set_uniform_colors_ubv(
@@ -1229,6 +1251,9 @@ static void widgetbase_draw_color(WidgetBase *wtb,
       theme::get_color_4ubv(TH_WIDGET_EMBOSS, emboss_col);
     }
   }
+
+  /* GlassMesh: keep displayed colors accurate, only a rim. */
+  widget_glass_set(wtb, 1.0f, 0.0f);
 
   /* Draw everything in one draw-call. */
   widgetbase_set_uniform_alpha_check(wtb, show_alpha_checkers);
@@ -3435,6 +3460,8 @@ static void widget_menu_back(uiWidgetColors *wcol,
 
   round_box_edges(&wtb, roundboxalign, rect, radius);
   wtb.draw_emboss = false;
+  /* GlassMesh: menus and popups are glass panes, a brighter rim and no sheen. */
+  widget_glass_set(&wtb, 1.6f, 0.0f);
   widgetbase_draw(&wtb, wcol);
 
   GPU_blend(GPU_BLEND_NONE);
@@ -4233,6 +4260,8 @@ void draw_widget_scroll(uiWidgetColors *wcol, const rcti *rect, const rcti *slid
                                    wcol->roundness * BLI_rcti_size_x(rect);
 
   wtb.uniform_params.shade_dir = (horizontal) ? 1.0f : 0.0;
+  /* GlassMesh: keep scroll-bars flat. */
+  widget_glass_set(&wtb, 0.0f, 0.0f);
 
   /* draw back part, colors swapped and shading inverted */
   if (horizontal) {
@@ -4570,6 +4599,8 @@ static void widget_numslider(Button *but,
 
     round_box_edges(&wtb1, roundboxalign_slider, &rect1, rad);
     wtb1.draw_outline = false;
+    /* GlassMesh: the backdrop already has the rim, only add a soft sheen to the fill. */
+    widget_glass_set(&wtb1, 0.0f, 1.0f);
     widgetbase_set_uniform_discard_factor(&wtb1, factor_discard);
     widgetbase_draw(&wtb1, wcol);
 

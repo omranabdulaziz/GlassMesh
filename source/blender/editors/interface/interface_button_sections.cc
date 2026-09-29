@@ -22,6 +22,8 @@
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 
+#include "UI_glass.hh"
+
 #include "interface_intern.hh"
 
 namespace blender::ui {
@@ -216,6 +218,50 @@ static void draw_button_sections_alignment_separator(const ARegion *region,
   GPU_blend(GPU_BLEND_NONE);
 }
 
+/**
+ * GlassMesh: with the glass style the sections are drawn as floating, fully rounded glass pills
+ * (inset from the region edges, no separator line).
+ */
+static void draw_button_sections_glass(const ARegion *region,
+                                       const Span<rcti> section_bounds,
+                                       const ThemeColorID colorid,
+                                       const float aspect)
+{
+  float bg_color[4];
+  theme::get_color_4fv(colorid, bg_color);
+  /* Make sure the pills read as glass (and get the frosted backdrop). */
+  bg_color[3] = std::max(bg_color[3], 0.6f);
+  float outline[4] = {1.0f, 1.0f, 1.0f, 0.1f};
+
+  const float inset_x = 4.0f * UI_SCALE_FAC / aspect;
+  const float inset_y = 1.0f * UI_SCALE_FAC / aspect;
+
+  GPU_blend(GPU_BLEND_ALPHA);
+  draw_roundbox_corner_set(CNR_ALL);
+  for (const rcti &bounds : section_bounds) {
+    rctf pill;
+    BLI_rctf_rcti_copy(&pill, &bounds);
+    pill.xmin = std::max(pill.xmin, inset_x);
+    pill.xmax = std::min(pill.xmax, float(region->winx) - inset_x);
+    pill.ymin = std::max(pill.ymin, inset_y);
+    pill.ymax = std::min(pill.ymax, float(region->winy) - inset_y);
+    if (!BLI_rctf_is_valid(&pill)) {
+      continue;
+    }
+    const float radius = std::min(0.5f * BLI_rctf_size_y(&pill), 10.0f * UI_SCALE_FAC / aspect);
+    draw_roundbox_4fv_glass(&pill,
+                            bg_color,
+                            nullptr,
+                            1.0f,
+                            outline,
+                            U.pixelsize,
+                            radius,
+                            glass_rim_strength() * 1.3f,
+                            0.0f);
+  }
+  GPU_blend(GPU_BLEND_NONE);
+}
+
 void region_button_sections_draw(const ARegion *region,
                                  const int /*ThemeColorID*/ colorid,
                                  const ButtonSectionsAlign align)
@@ -225,6 +271,11 @@ void region_button_sections_draw(const ARegion *region,
   const float corner_radius = 4.0f * UI_SCALE_FAC / aspect;
 
   const Vector<rcti> section_bounds = button_section_bounds_calc(region, true);
+
+  if (glass_enabled()) {
+    draw_button_sections_glass(region, section_bounds, ThemeColorID(colorid), aspect);
+    return;
+  }
 
   draw_button_sections_background(
       region, section_bounds, ThemeColorID(colorid), align, corner_radius);

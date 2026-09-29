@@ -1414,7 +1414,11 @@ struct WidgetBaseParameters {
    * Initialize value to 1.0f if you don't want discard. */
   float alpha_discard;
   float tria_type;
-  float _pad[3];
+  /** GlassMesh: strength of the bright rim highlight along the widget edge (0 disables). */
+  float glass_rim;
+  /** GlassMesh: strength of the soft vertical sheen over the widget body (0 disables). */
+  float glass_sheen;
+  float _pad;
 };
 
 enum {

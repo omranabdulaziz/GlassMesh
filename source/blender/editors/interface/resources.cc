@@ -30,6 +30,7 @@
 
 #include "ED_screen.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface_icons.hh"
 
 #include "GPU_framebuffer.hh"
@@ -45,6 +46,12 @@ static bThemeState g_theme_state = {
     SPACE_VIEW3D,
     RGN_TYPE_WINDOW,
 };
+
+/**
+ * GlassMesh: when set, #TH_BACK keeps the theme's alpha for non-overlapping regions too.
+ * Only used while clearing region backgrounds, so other drawing with #TH_BACK stays opaque.
+ */
+static bool g_theme_back_keep_alpha = false;
 
 }  // namespace theme
 
@@ -212,7 +219,9 @@ const uchar *get_color_ptr(bTheme *btheme, int spacetype, int colorid)
           }
 
           copy_v4_v4_uchar(back, cp);
-          if (!ED_region_is_overlap(spacetype, g_theme_state.regionid)) {
+          if (!ED_region_is_overlap(spacetype, g_theme_state.regionid) &&
+              !g_theme_back_keep_alpha)
+          {
             back[3] = 255;
           }
           cp = back;
@@ -1584,6 +1593,19 @@ void get_color_blend_shade_3ubv(
 
 void frame_buffer_clear(int colorid)
 {
+  if (glass_enabled()) {
+    /* GlassMesh: keep the theme's translucency, regions are composited with pre-multiplied
+     * alpha over the glass wallpaper (see `wm_draw_glass.cc`). */
+    float col[4];
+    g_theme_back_keep_alpha = true;
+    get_color_4fv(colorid, col);
+    g_theme_back_keep_alpha = false;
+    /* Zero alpha means "no translucency set" in older themes: keep those opaque. */
+    const float alpha = (col[3] > 0.0f) ? col[3] : 1.0f;
+    GPU_clear_color(col[0] * alpha, col[1] * alpha, col[2] * alpha, alpha);
+    return;
+  }
+
   float col[3];
 
   get_color_3fv(colorid, col);
