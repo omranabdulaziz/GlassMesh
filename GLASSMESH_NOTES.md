@@ -139,8 +139,16 @@ work. It is a full build (Cycles, FFmpeg, USD, ...), unlike the "lite" local bui
 and Windows builds were not started (no Mac or Windows machine here).
 
 The Windows package showed that the troubleshooting scripts (`blender_debug_gpu.cmd`, ...) still
-started `blender.exe`, now fixed, and that build tools were included in all packages, now left
-out. The next run picks up both.
+started `blender.exe`, and that build tools were included in all packages. Both are fixed.
+
+**Second run** ([run 2](https://github.com/omranabdulaziz/GlassMesh/actions/runs/36561784889),
+commit `b4f77263`, with those fixes): all three platforms built successfully again (Linux 67 min,
+macOS 50 min, Windows 128 min). These are the builds to test first. Checked here:
+
+- Linux: the package contains only the application, `--version` and a Cycles render work.
+- Windows: the package contains only the application (and `blender.pdb`), the `.cmd` scripts start
+  `glassmesh.exe`. `glassmesh.exe` has the GlassMesh icon and version information (product name,
+  disclaimer, GPL notice).
 
 ## What I could not do (and why)
 
