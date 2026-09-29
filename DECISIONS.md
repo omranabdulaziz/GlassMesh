@@ -141,9 +141,26 @@ changes only, don't break any functionality, don't ask questions.
     and GlassMesh's *own* new binary files (splash, macOS icon) are stored directly in git
     (`.gitattributes` exceptions), so everyone can build from this repository.
 
+## GitHub repository & test builds
+
+38. **GitHub page:** `.github/README.md` (Blender's "this is a mirror" notice) was removed, because
+    GitHub shows it instead of the root `README.md`. The pull request template now describes
+    GlassMesh contributions. `.github/FUNDING.yml` (the *Sponsor* button, pointing to the Blender
+    Development Fund) was kept, supporting Blender is in GlassMesh's interest too.
+39. **Test build workflow:** GitHub-hosted runners (Ubuntu 24.04 with GCC 14, macOS 15 on Apple
+    Silicon, Windows Server 2025 with Visual Studio 2022), using the same steps as the README and
+    Blender's pre-compiled libraries. Intel macOS is not built, Blender 5.x doesn't support it.
+    Default build options, so the test builds match what users get from `make`.
+40. **When it runs:** on pushes to `glassmesh` (not for documentation-only changes), on `v*` tags
+    and by hand. The repository is public, so GitHub doesn't charge for the build minutes. A newer
+    push cancels a build that's still running. Builds are kept for 14 days.
+41. **Not signed:** the test builds are not code-signed (that needs paid Apple/Microsoft
+    certificates). The macOS app gets an ad-hoc signature so it can be opened after confirming in
+    the system settings. They're not meant to be the Gumroad builds, but can be a starting point.
+
 ## Local verification environment (not part of GlassMesh)
 
-38. The session's network blocks `projects.blender.org`, so Blender's pre-compiled libraries and
+42. The session's network blocks `projects.blender.org`, so Blender's pre-compiled libraries and
     LFS files couldn't be downloaded. To still build and *look at* the result, a local "lite" build
     was made with Ubuntu system libraries, headers of the exact library versions, and the shared
     libraries from the official Blender 5.2.2 Linux release. Stand-ins for LFS files came from that

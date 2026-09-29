@@ -155,6 +155,18 @@ pre-compiled libraries (several GB) and takes a while, later builds are much fas
 
 To update an existing checkout later, run `make update` followed by `make` again.
 
+Test builds (GitHub Actions)
+----------------------------
+
+The [GlassMesh Build](.github/workflows/glassmesh_build.yml) workflow builds GlassMesh for
+Linux (x64), macOS (Apple Silicon) and Windows (x64) on GitHub's servers. It runs on every push
+to the `glassmesh` branch and on `v*` tags, and can be started by hand from the **Actions** tab
+(*GlassMesh Build > Run workflow*). A build takes a few hours.
+
+The builds are attached to the workflow run as **Artifacts** (kept for 14 days). They are test
+builds and are not code-signed: on macOS, confirm opening the app in
+**System Settings > Privacy & Security**, on Windows click **More info > Run anyway**.
+
 Project status & documentation
 ------------------------------
 

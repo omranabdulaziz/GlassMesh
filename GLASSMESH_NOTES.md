@@ -109,6 +109,18 @@ sharper and faster). The viewport shows Blender's default scene.
   `DECISIONS.md`.
 - **Git LFS:** `.lfsconfig` (upstream LFS objects from projects.blender.org), `.gitattributes` and
   `.gitignore` (GlassMesh's own binary files are stored directly in git).
+- **GitHub page:** removed `.github/README.md` (Blender's mirror notice, which GitHub showed instead
+  of `README.md`), GlassMesh pull request template.
+
+### 3. Test builds (GitHub Actions)
+
+- `.github/workflows/glassmesh_build.yml` – builds Linux x64, macOS arm64 and Windows x64 on
+  pushes to `glassmesh`, on `v*` tags, or by hand, and uploads them as artifacts of the run.
+- `tools/glassmesh/ci_fetch.sh` – downloads the Git LFS files and Blender's pre-compiled
+  libraries, like `make update`.
+
+The workflow was checked with `actionlint` and `shellcheck`. Its first run started with the push of
+the workflow: <https://github.com/omranabdulaziz/GlassMesh/actions/workflows/glassmesh_build.yml>.
 
 Not changed: internal code, module and target names, the Python API (`bpy`), the `.blend` file
 format and its identifiers, all copyright notices and license files.
@@ -143,10 +155,23 @@ format and its identifiers, all copyright notices and license files.
   above), but renaming hundreds of texts would break their translations and make every future
   Blender update conflict.
 
+## Repository settings to change on GitHub
+
+These can only be changed by you, on github.com:
+
+1. **Enable Issues:** *Settings > General > Features > Issues*. They are off in forks, and
+   GlassMesh's *Help > Report a Bug* opens a new GitHub issue.
+2. **Make `glassmesh` the default branch:** *Settings > General > Default branch*. Visitors then see
+   the GlassMesh README and code, and the *Run workflow* button appears (GitHub only offers it for
+   workflows on the default branch).
+3. Optionally change the repository's *Website* link (next to the description). It was copied
+   from Blender's GitHub mirror and points to Blender's Git documentation.
+
 ## What to test first
 
-1. **Build on each platform** with the README instructions (`make update && make`). Watch
-   especially for the executable names (`glassmesh.exe` / `GlassMesh.app`) and that the app starts.
+1. **Build on each platform**, with the GitHub Actions test builds or the README instructions
+   (`make update && make`). Watch especially for the executable names (`glassmesh.exe` /
+   `GlassMesh.app`) and that the app starts.
 2. **First start:** splash screen (GlassMesh artwork), window title "... - GlassMesh 5.2.2 LTS",
    *About GlassMesh* in the app menu, `glassmesh --version`.
 3. **Config separation:** preferences are saved to the GlassMesh folder, a regular Blender
