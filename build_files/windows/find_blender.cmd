@@ -5,19 +5,19 @@ if EXIST "%BLENDER_BIN%" (
 
 REM Check the build folder next, if ninja was used there will be no
 REM debug/release folder
-set BLENDER_BIN=%BUILD_DIR%\bin\blender.exe
+set BLENDER_BIN=%BUILD_DIR%\bin\glassmesh.exe
 if EXIST "%BLENDER_BIN%" (
     goto detect_blender_done
 )
 
 REM Check the release folder next
-set BLENDER_BIN=%BUILD_DIR%\bin\release\blender.exe
+set BLENDER_BIN=%BUILD_DIR%\bin\release\glassmesh.exe
 if EXIST "%BLENDER_BIN%" (
     goto detect_blender_done
 )
 
 REM Check the debug folder next
-set BLENDER_BIN=%BUILD_DIR%\bin\debug\blender.exe
+set BLENDER_BIN=%BUILD_DIR%\bin\debug\glassmesh.exe
 if EXIST "%BLENDER_BIN%" (
     goto detect_blender_done
 )

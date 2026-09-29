@@ -166,13 +166,18 @@ endif()
 
 get_blender_version()
 
+# GlassMesh: user facing application & executable names. Internal CMake targets, modules and the
+# `.blend` file format keep their Blender names.
+set(GLASSMESH_EXE_NAME "glassmesh")
+set(GLASSMESH_APP_NAME "GlassMesh")
+
 if(WIN32)
   add_definitions(
     # This is the app ID used for file registration, given it's used from several modules
     # there really is no nice way to get this information consistent without a global define.
-    -DBLENDER_WIN_APPID="blender.${BLENDER_VERSION_MAJOR}.${BLENDER_VERSION_MINOR}"
+    -DBLENDER_WIN_APPID="glassmesh.${BLENDER_VERSION_MAJOR}.${BLENDER_VERSION_MINOR}"
     # This is the name that will be shown in the taskbar and OpenWith windows UI
-    -DBLENDER_WIN_APPID_FRIENDLY_NAME="Blender ${BLENDER_VERSION_MAJOR}.${BLENDER_VERSION_MINOR}"
+    -DBLENDER_WIN_APPID_FRIENDLY_NAME="GlassMesh ${BLENDER_VERSION_MAJOR}.${BLENDER_VERSION_MINOR}"
   )
 endif()
 

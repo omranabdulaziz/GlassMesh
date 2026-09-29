@@ -336,6 +336,10 @@ if(WITH_PYTHON_MODULE)
 
 else()
   add_executable(blender ${EXETYPE} ${SRC})
+  if(NOT APPLE)
+    # GlassMesh: user facing executable name (the target stays `blender`).
+    set_target_properties(blender PROPERTIES OUTPUT_NAME ${GLASSMESH_EXE_NAME})
+  endif()
   if(WITH_CPU_CHECK)
     # blender_cpu_check *NEEDS* to be linked first, there can be no exceptions
     # to this, this is to ensure this will be the first code to run once the
@@ -354,6 +358,7 @@ else()
     endif()
     target_compile_definitions(blender-launcher PRIVATE -D_UNICODE -DUNICODE)
     target_link_libraries(blender-launcher Pathcch.lib)
+    set_target_properties(blender-launcher PROPERTIES OUTPUT_NAME "${GLASSMESH_EXE_NAME}-launcher")
   endif()
 endif()
 
@@ -434,9 +439,9 @@ elseif(APPLE)
       set(TARGETDIR_LIB ${PYTHON_SITE_PACKAGES}/bpy/lib)
     endif()
   else()
-    set(TARGETDIR_VER "Blender.app/Contents/Resources/${BLENDER_VERSION}")
-    set(TARGETDIR_LIB "Blender.app/Contents/Resources/lib")
-    set(TARGETDIR_TEXT "Blender.app/Contents/Resources/text")
+    set(TARGETDIR_VER "${GLASSMESH_APP_NAME}.app/Contents/Resources/${BLENDER_VERSION}")
+    set(TARGETDIR_LIB "${GLASSMESH_APP_NAME}.app/Contents/Resources/lib")
+    set(TARGETDIR_TEXT "${GLASSMESH_APP_NAME}.app/Contents/Resources/text")
   endif()
   set(TARGETDIR_SITE_PACKAGES "${TARGETDIR_VER}/python/lib/python${PYTHON_VERSION}/site-packages")
   # Skip re-linking on CPACK / install.
@@ -775,7 +780,7 @@ if(UNIX AND NOT APPLE)
 
     # none of the other files are needed currently
   elseif(WITH_INSTALL_PORTABLE)
-    set(BLENDER_BIN "blender")
+    set(BLENDER_BIN "${GLASSMESH_EXE_NAME}")
     install(
       TARGETS blender
       DESTINATION "."
@@ -788,12 +793,21 @@ if(UNIX AND NOT APPLE)
       )
     endif()
 
+    # GlassMesh: installed with GlassMesh names so they never clash with a Blender installation.
     install(
-      FILES
-        ${CMAKE_SOURCE_DIR}/release/freedesktop/blender.desktop
-        ${CMAKE_SOURCE_DIR}/release/freedesktop/icons/scalable/apps/blender.svg
-        ${CMAKE_SOURCE_DIR}/release/freedesktop/icons/symbolic/apps/blender-symbolic.svg
+      FILES ${CMAKE_SOURCE_DIR}/release/freedesktop/blender.desktop
       DESTINATION "."
+      RENAME ${GLASSMESH_EXE_NAME}.desktop
+    )
+    install(
+      FILES ${CMAKE_SOURCE_DIR}/release/freedesktop/icons/scalable/apps/blender.svg
+      DESTINATION "."
+      RENAME ${GLASSMESH_EXE_NAME}.svg
+    )
+    install(
+      FILES ${CMAKE_SOURCE_DIR}/release/freedesktop/icons/symbolic/apps/blender-symbolic.svg
+      DESTINATION "."
+      RENAME ${GLASSMESH_EXE_NAME}-symbolic.svg
     )
 
     if(WITH_BLENDER_THUMBNAILER)
@@ -811,11 +825,12 @@ if(UNIX AND NOT APPLE)
         PROGRAMS
         ${CMAKE_SOURCE_DIR}/release/bin/blender-launcher
         DESTINATION "."
+        RENAME ${GLASSMESH_EXE_NAME}-launcher
       )
     endif()
   else()
     # main blender binary
-    set(BLENDER_BIN "bin/blender")
+    set(BLENDER_BIN "bin/${GLASSMESH_EXE_NAME}")
     install(
       TARGETS blender
       DESTINATION "./bin"
@@ -824,6 +839,7 @@ if(UNIX AND NOT APPLE)
     install(
       FILES ${CMAKE_SOURCE_DIR}/release/freedesktop/blender.desktop
       DESTINATION "./share/applications"
+      RENAME ${GLASSMESH_EXE_NAME}.desktop
     )
     install(
       FILES ${CMAKE_SOURCE_DIR}/release/freedesktop/org.blender.Blender.metainfo.xml
@@ -832,10 +848,12 @@ if(UNIX AND NOT APPLE)
     install(
       FILES ${CMAKE_SOURCE_DIR}/release/freedesktop/icons/scalable/apps/blender.svg
       DESTINATION "./share/icons/hicolor/scalable/apps"
+      RENAME ${GLASSMESH_EXE_NAME}.svg
     )
     install(
       FILES ${CMAKE_SOURCE_DIR}/release/freedesktop/icons/symbolic/apps/blender-symbolic.svg
       DESTINATION "./share/icons/hicolor/symbolic/apps"
+      RENAME ${GLASSMESH_EXE_NAME}-symbolic.svg
     )
     if(WITH_BLENDER_THUMBNAILER)
       install(
@@ -1040,11 +1058,12 @@ elseif(WIN32)
     install(
       FILES ${CMAKE_BINARY_DIR}/blender.exe.manifest
       DESTINATION "."
+      RENAME ${GLASSMESH_EXE_NAME}.exe.manifest
     )
     install(
       FILES ${CMAKE_BINARY_DIR}/blender.exe.manifest
       DESTINATION "."
-      RENAME blender-launcher.exe.manifest
+      RENAME ${GLASSMESH_EXE_NAME}-launcher.exe.manifest
     )
   endif()
   windows_install_shared_manifest(
@@ -1697,7 +1716,7 @@ elseif(WIN32)
 elseif(APPLE)
   if(NOT WITH_PYTHON_MODULE)
     # Uppercase name for app bundle.
-    set_target_properties(blender PROPERTIES OUTPUT_NAME Blender)
+    set_target_properties(blender PROPERTIES OUTPUT_NAME ${GLASSMESH_APP_NAME})
   endif()
 
   set(OSX_APP_SOURCEDIR ${CMAKE_SOURCE_DIR}/release/darwin/Blender.app)
@@ -1741,11 +1760,12 @@ elseif(APPLE)
   # Give the bundle actual creation/modification date.
   #
   # Note that the directory might not yet exist, which happens when CMAKE is first run.
-  if(NOT EXISTS ${EXECUTABLE_OUTPUT_PATH}/Blender.app)
-    file(MAKE_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}/Blender.app)
+  if(NOT EXISTS ${EXECUTABLE_OUTPUT_PATH}/${GLASSMESH_APP_NAME}.app)
+    file(MAKE_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}/${GLASSMESH_APP_NAME}.app)
   endif()
   execute_process(
-    COMMAND SetFile -d ${SETFILE_DATE} -m ${SETFILE_DATE} ${EXECUTABLE_OUTPUT_PATH}/Blender.app
+    COMMAND SetFile -d ${SETFILE_DATE} -m ${SETFILE_DATE}
+            ${EXECUTABLE_OUTPUT_PATH}/${GLASSMESH_APP_NAME}.app
   )
 
   set(BLENDER_BIN "bin/blender")
@@ -1756,18 +1776,18 @@ elseif(APPLE)
 
   install(
     FILES ${OSX_APP_SOURCEDIR}/Contents/PkgInfo
-    DESTINATION "Blender.app/Contents"
+    DESTINATION "${GLASSMESH_APP_NAME}.app/Contents"
   )
 
   install_dir(
     ${OSX_APP_SOURCEDIR}/Contents/Resources
-    "Blender.app/Contents"
+    "${GLASSMESH_APP_NAME}.app/Contents"
   )
 
   if(WITH_BLENDER_THUMBNAILER)
     install(
       TARGETS blender-thumbnailer
-      DESTINATION "./Blender.app/Contents/PlugIns"
+      DESTINATION "./${GLASSMESH_APP_NAME}.app/Contents/PlugIns"
     )
   endif()
 
@@ -1826,7 +1846,7 @@ elseif(APPLE)
     unset(PYTHON_EXECUTABLE_NAME_ONLY)
     install(
       PROGRAMS ${CMAKE_BINARY_DIR}/release/darwin/scripts/blender-system-info.sh
-      DESTINATION "Blender.app/Contents/Resources"
+      DESTINATION "${GLASSMESH_APP_NAME}.app/Contents/Resources"
     )
   endif()
 
@@ -2092,7 +2112,7 @@ endif()
 # Setup launcher
 
 if(WIN32 AND NOT WITH_PYTHON_MODULE)
-  set(BLENDER_BIN "blender.exe")
+  set(BLENDER_BIN "${GLASSMESH_EXE_NAME}.exe")
   install(
     TARGETS blender blender-launcher
     COMPONENT Blender

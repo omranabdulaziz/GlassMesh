@@ -544,12 +544,12 @@ static bool bli_executable_path_get(LPWSTR path, DWORD size)
     return false;
   }
 
-  /* Replace the filename "blender.exe" with "blender-launcher.exe". */
+  /* Replace the filename "glassmesh.exe" with "glassmesh-launcher.exe". */
   if (!PathRemoveFileSpecW(executable_path)) {
     /* Failed to remove the file spec. Use the original path. */
     return true;
   }
-  if (!PathAppendW(executable_path, L"blender-launcher.exe")) {
+  if (!PathAppendW(executable_path, L"glassmesh-launcher.exe")) {
     /* Failed to append the new filename. Use the original path. */
     return true;
   }

@@ -24,11 +24,11 @@ BEGIN
     BEGIN
       VALUE "FileVersion", BLEN_VER_RC_STR
       VALUE "ProductVersion", BLEN_VER_RC_STR
-      VALUE "CompanyName", "Blender Foundation"
-      VALUE "FileDescription", "Blender"
-      VALUE "LegalCopyright", "GPLv3 (Blender Foundation)"
-      VALUE "OriginalFilename", "blender.exe"
-      VALUE "ProductName", "Blender"
+      VALUE "CompanyName", "GlassMesh (unofficial fork of Blender)"
+      VALUE "FileDescription", "GlassMesh - an unofficial fork of Blender, not affiliated with or endorsed by the Blender Foundation"
+      VALUE "LegalCopyright", "GPLv3 (Blender Foundation and GlassMesh contributors)"
+      VALUE "OriginalFilename", "glassmesh.exe"
+      VALUE "ProductName", "GlassMesh"
     END
   END
   BLOCK "VarFileInfo"
