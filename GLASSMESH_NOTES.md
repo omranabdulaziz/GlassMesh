@@ -10,16 +10,16 @@ Foundation.
 ## Preview
 
 Screenshots from the verification build (Linux, software OpenGL, so a real GPU looks the same but
-sharper and faster). The viewport shows Blender's default scene.
+sharper and faster). The viewport shows Blender's default scene in front of the built-in wallpaper.
 
 | | |
 |---|---|
 | ![Layout](docs/glassmesh/layout.jpg) | ![Shading](docs/glassmesh/shading.jpg) |
-| Layout | Shading |
+| Layout | Shading, with glass node editor cards |
 | ![Animation](docs/glassmesh/animation.jpg) | ![Sculpting](docs/glassmesh/sculpting.jpg) |
 | Animation | Sculpting |
 | ![Frosted menu](docs/glassmesh/frosted_menu.jpg) | ![Preferences](docs/glassmesh/preferences.jpg) |
-| Frosted menu & side-bar over a colorful scene | Preferences, with the new Glass settings |
+| Frosted menu over the glass 3D viewport | Preferences, with switches and the Glass settings |
 | ![About](docs/glassmesh/about.jpg) | ![Glass off](docs/glassmesh/glass_off_blender_dark.jpg) |
 | About GlassMesh | Glass effect off + Blender Dark preset = classic look |
 
