@@ -602,9 +602,19 @@ static void arg_py_context_restore(bContext *C, BlendePyContextStore *c_py)
  *
  * \{ */
 
+/**
+ * GlassMesh: how the application describes itself. The version is the version of Blender that
+ * GlassMesh is based on (so the version is still the second word of the first line).
+ */
+static const char *glassmesh_disclaimer =
+    "GlassMesh is an unofficial fork of Blender and is not affiliated with or endorsed by the "
+    "Blender Foundation.";
+
 static void print_version_full()
 {
-  printf("Blender %s\n", BKE_blender_version_string());
+  printf("GlassMesh %s\n", BKE_blender_version_string());
+  printf("\tbased on Blender %s\n", BKE_blender_version_string());
+  printf("\t%s\n", glassmesh_disclaimer);
 #  ifdef BUILD_DATE
   printf("\tbuild date: %s\n", build_date);
   printf("\tbuild time: %s\n", build_time);
@@ -626,19 +636,19 @@ static void print_version_short()
 #  ifdef BUILD_DATE
   /* NOTE: We include built time since sometimes we need to tell broken from
    * working built of the same hash. */
-  printf("Blender %s (hash %s built %s %s)\n",
+  printf("GlassMesh %s (hash %s built %s %s)\n",
          BKE_blender_version_string(),
          build_hash,
          build_date,
          build_time);
 #  else
-  printf("Blender %s\n", BKE_blender_version_string());
+  printf("GlassMesh %s\n", BKE_blender_version_string());
 #  endif
 }
 
 static const char arg_handle_print_version_doc[] =
     "\n\t"
-    "Print Blender version and exit.";
+    "Print GlassMesh version and exit.";
 static int arg_handle_print_version(int /*argc*/, const char ** /*argv*/, void * /*data*/)
 {
   print_version_full();
@@ -661,8 +671,9 @@ static void print_help(bArgs *ba, bool all)
 
 #  define PRINT(...) BLI_args_printf(ba, __VA_ARGS__)
 
-  PRINT("Blender %s\n", BKE_blender_version_string());
-  PRINT("Usage: blender [args ...] [file] [args ...]\n");
+  PRINT("GlassMesh %s\n", BKE_blender_version_string());
+  PRINT("%s\n", glassmesh_disclaimer);
+  PRINT("Usage: glassmesh [args ...] [file] [args ...]\n");
   PRINT("\n");
 
   PRINT("Render Options:\n");
@@ -1369,7 +1380,7 @@ static const char arg_handle_debug_mode_set_doc[] =
 static int arg_handle_debug_mode_set(int /*argc*/, const char ** /*argv*/, void *data)
 {
   G.debug |= G_DEBUG;
-  printf("Blender %s\n", BKE_blender_version_string());
+  printf("GlassMesh %s\n", BKE_blender_version_string());
   MEM_set_memory_debug();
 #  ifndef NDEBUG
   BLI_mempool_set_memory_debug();

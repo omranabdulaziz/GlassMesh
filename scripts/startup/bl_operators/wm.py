@@ -3382,7 +3382,7 @@ class WM_MT_splash_quick_setup(Menu):
             col = split.column()
             col.operator(
                 "preferences.copy_prev",
-                text=iface_("Import Blender {:d}.{:d} Preferences", "Operator").format(*old_version),
+                text=iface_("Import GlassMesh {:d}.{:d} Preferences", "Operator").format(*old_version),
                 icon='NONE',
                 translate=False,
             )
@@ -3409,7 +3409,8 @@ class WM_MT_splash_quick_setup(Menu):
         sub = col.column(heading="Theme")
         label = bpy.types.USERPREF_MT_interface_theme_presets.bl_label
         if label == "Presets":
-            label = "Blender Dark"
+            # GlassMesh: the built-in default theme.
+            label = "GlassMesh"
         sub.menu("USERPREF_MT_interface_theme_presets", text=label)
 
         col.separator()
@@ -3496,7 +3497,10 @@ class WM_MT_splash(Menu):
 
         col2 = split.column()
 
-        col2.operator("wm.url_open_preset", text="What's New", icon='URL').type = 'RELEASE_NOTES'
+        col2.operator("wm.url_open", text="GlassMesh Source Code", icon='URL').url = (
+            "https://github.com/omranabdulaziz/GlassMesh"
+        )
+        col2.operator("wm.url_open_preset", text="Blender Release Notes", icon='URL').type = 'RELEASE_NOTES'
         col2.operator("wm.url_open_preset", text="Donate to Blender", icon='FUND').type = 'FUND'
 
         layout.separator()
@@ -3519,7 +3523,9 @@ class WM_MT_splash_about(Menu):
 
         col = split.column(align=True)
         col.scale_y = 0.8
+        # GlassMesh: the version is the version of Blender GlassMesh is based on.
         col.label(text=iface_("Version: {:s}").format(bpy.app.version_string), translate=False)
+        col.label(text=iface_("Based on Blender {:s}").format(bpy.app.version_string), translate=False)
         col.separator(factor=2.5)
         col.label(text=iface_("Date: {:s} {:s}").format(
             bpy.app.build_commit_date.decode("utf-8", "replace"),
@@ -3538,17 +3544,25 @@ class WM_MT_splash_about(Menu):
         del _ghost_backend, ghost_backend
 
         col.separator(factor=2.0)
-        col.label(text="Blender is free software")
+        # GlassMesh: required disclaimer, and GPL notice (GlassMesh is free software like Blender).
+        col.label(text="GlassMesh is an unofficial fork of Blender and is not")
+        col.label(text="affiliated with or endorsed by the Blender Foundation.")
+        col.separator(factor=1.0)
+        col.label(text="GlassMesh and Blender are free software")
         col.label(text="Licensed under the GNU General Public License")
 
         col = split.column(align=True)
         col.emboss = 'PULLDOWN_MENU'
-        col.operator("wm.url_open_preset", text="Donate", icon='FUND').type = 'FUND'
-        col.operator("wm.url_open_preset", text="What's New", icon='URL').type = 'RELEASE_NOTES'
+        col.operator("wm.url_open", text="Source Code", icon='URL').url = (
+            "https://github.com/omranabdulaziz/GlassMesh"
+        )
+        col.operator("wm.url_open", text="License", icon='URL').url = (
+            "https://github.com/omranabdulaziz/GlassMesh/blob/glassmesh/COPYING"
+        )
         col.separator(factor=2.0)
-        col.operator("wm.url_open_preset", text="Credits", icon='URL').type = 'CREDITS'
-        col.operator("wm.url_open", text="License", icon='URL').url = "https://www.blender.org/about/license/"
-        col.operator("wm.url_open", text="Blender Store", icon='URL').url = "https://store.blender.org"
+        col.operator("wm.url_open_preset", text="Blender Credits", icon='URL').type = 'CREDITS'
+        col.operator("wm.url_open_preset", text="Blender Release Notes", icon='URL').type = 'RELEASE_NOTES'
+        col.operator("wm.url_open_preset", text="Donate to Blender", icon='FUND').type = 'FUND'
         col.operator("wm.url_open_preset", text="Blender Website", icon='URL').type = 'BLENDER'
 
 
