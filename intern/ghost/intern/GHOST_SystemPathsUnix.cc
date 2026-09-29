@@ -100,13 +100,15 @@ const char *GHOST_SystemPathsUnix::getUserDir(int version, const char *versionst
 
     last_version = version;
 
+    /* GlassMesh: use a separate configuration folder, so a regular Blender installation's
+     * preferences are never read or overwritten. */
     if (home) {
-      user_path = string(home) + "/blender/" + versionstr;
+      user_path = string(home) + "/GlassMesh/" + versionstr;
     }
     else {
       home = home_dir_get();
       if (home) {
-        user_path = string(home) + "/.config/blender/" + versionstr;
+        user_path = string(home) + "/.config/GlassMesh/" + versionstr;
       }
       else {
         return nullptr;

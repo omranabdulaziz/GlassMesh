@@ -53,7 +53,9 @@ const char *GHOST_SystemPathsWin32::getUserDir(int, const char *versionstr) cons
 
   if (hResult == S_OK) {
     conv_utf_16_to_8(knownpath_16, knownpath, MAX_PATH * 3);
-    strcat(knownpath, "\\Blender Foundation\\Blender\\");
+    /* GlassMesh: use a separate configuration folder, so a regular Blender installation's
+     * preferences are never read or overwritten. */
+    strcat(knownpath, "\\GlassMesh\\");
     strcat(knownpath, versionstr);
     user_dir = knownpath;
   }

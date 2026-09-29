@@ -15,7 +15,8 @@
  * Base directories retrieval.
  */
 
-static const char *GetApplicationSupportDir(const char *versionstr,
+static const char *GetApplicationSupportDir(const char *app_folder,
+                                            const char *versionstr,
                                             const NSSearchPathDomainMask mask,
                                             char *tempPath,
                                             const std::size_t len_tempPath)
@@ -30,8 +31,9 @@ static const char *GetApplicationSupportDir(const char *versionstr,
 
     snprintf(tempPath,
              len_tempPath,
-             "%s/Blender/%s",
+             "%s/%s/%s",
              [basePath cStringUsingEncoding:NSASCIIStringEncoding],
+             app_folder,
              versionstr);
   }
   return tempPath;
@@ -40,13 +42,17 @@ static const char *GetApplicationSupportDir(const char *versionstr,
 const char *GHOST_SystemPathsCocoa::getSystemDir(int /* version */, const char *versionstr) const
 {
   static char tempPath[512] = "";
-  return GetApplicationSupportDir(versionstr, NSLocalDomainMask, tempPath, sizeof(tempPath));
+  return GetApplicationSupportDir(
+      "Blender", versionstr, NSLocalDomainMask, tempPath, sizeof(tempPath));
 }
 
 const char *GHOST_SystemPathsCocoa::getUserDir(int /* version */, const char *versionstr) const
 {
   static char tempPath[512] = "";
-  return GetApplicationSupportDir(versionstr, NSUserDomainMask, tempPath, sizeof(tempPath));
+  /* GlassMesh: use a separate configuration folder, so a regular Blender installation's
+   * preferences are never read or overwritten. */
+  return GetApplicationSupportDir(
+      "GlassMesh", versionstr, NSUserDomainMask, tempPath, sizeof(tempPath));
 }
 
 std::optional<std::string> GHOST_SystemPathsCocoa::getUserSpecialDir(
