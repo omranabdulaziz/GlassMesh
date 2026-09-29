@@ -175,7 +175,7 @@ const bTheme U_theme_default = {
     .wcol_tooltip = {
       .outline = RGBA(0xffffff40),
       .outline_sel = RGBA(0xffffff40),
-      .inner = RGBA(0x1d3a60e0),
+      .inner = RGBA(0x1d3a60c8),
       .inner_sel = RGBA(0x3a8ee6ff),
       .item = RGBA(0xffffffd9),
       .text = RGBA(0xffffffff),
@@ -291,16 +291,16 @@ const bTheme U_theme_default = {
   },
   .regions = {
     .asset_shelf = {
-      .back = RGBA(0x1c3d66b8),
-      .header_back = RGBA(0x1c3d66b8),
+      .back = RGBA(0x1c3d6680),
+      .header_back = RGBA(0x1c3d6680),
     },
     .channels = {
-      .back = RGBA(0x142c4c85),
+      .back = RGBA(0x142c4c5c),
       .text = RGBA(0xd3e1f2ff),
       .text_selected = RGBA(0xffffffff),
     },
     .scrubbing = {
-      .back = RGBA(0x142c4c99),
+      .back = RGBA(0x142c4c66),
       .text = RGBA(0xd3e1f2ff),
       .time_marker = RGBA(0xffffff80),
       .time_marker_selected = RGBA(0xffffffff),
@@ -541,7 +541,7 @@ const bTheme U_theme_default = {
     .nla_sound_sel = RGBA(0x1f7a7aff),
   },
   .space_sequencer = {
-    .back = RGBA(0x15243bff),
+    .back = RGBA(0x142c4c70),
     .title = RGBA(0xeeeeeeff),
     .text = RGBA(0xd3e1f2ff),
     .text_hi = RGBA(0xffffffff),
@@ -549,7 +549,7 @@ const bTheme U_theme_default = {
     .header_text = RGBA(0xeeeeeeff),
     .header_text_hi = RGBA(0xffffffff),
     .shade1 = RGBA(0xa0a0a000),
-    .grid = RGBA(0x0e1a2cff),
+    .grid = RGBA(0x34557fff),
     .vertex_select = RGBA(0xff8500ff),
     .bone_pose = RGBA(0x50c8ff50),
     .before_current_frame = RGBA(0xf22e23ff),
@@ -580,7 +580,7 @@ const bTheme U_theme_default = {
     .metadatatext = RGBA(0xffffffff),
   },
   .space_image = {
-    .back = RGBA(0x303030ff),
+    .back = RGBA(0x2b2f37cc),
     .title = RGBA(0xeeeeeeff),
     .text = RGBA(0xe6e6e6ff),
     .text_hi = RGBA(0xffffffff),
@@ -611,7 +611,7 @@ const bTheme U_theme_default = {
     .metadatatext = RGBA(0xffffffff),
   },
   .space_text = {
-    .back = RGBA(0x142c4cd6),
+    .back = RGBA(0x142c4cb8),
     .title = RGBA(0xeeeeeeff),
     .text = RGBA(0xe6e6e6ff),
     .text_hi = RGBA(0xffffffff),
@@ -654,7 +654,7 @@ const bTheme U_theme_default = {
     .row_alternate = RGBA(0xffffff04),
   },
   .space_node = {
-    .back = RGBA(0x182937ff),
+    .back = RGBA(0x182937d9),
     .title = RGBA(0xeeeeeeff),
     .text = RGBA(0xe6e6e6ff),
     .text_hi = RGBA(0xffffffff),
@@ -714,7 +714,7 @@ const bTheme U_theme_default = {
     .match = RGBA(0x3a8ee6ff),
   },
   .space_console = {
-    .back = RGBA(0x142c4cd6),
+    .back = RGBA(0x142c4cb8),
     .title = RGBA(0xeeeeeeff),
     .text = RGBA(0xe6e6e6ff),
     .text_hi = RGBA(0xffffffff),

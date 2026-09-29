@@ -38,14 +38,17 @@ GLASS_FIELD_SEL = "ffffff30"
 GLASS_BUTTON = "ffffff26"  # Light translucent button.
 GLASS_OUTLINE = "ffffff33" # Soft white edge.
 GLASS_MENU = "2a5288b8"    # Menus and popups (~72% opaque, blurred and made vivid behind).
-GLASS_TOOLTIP = "1d3a60e0"
+GLASS_TOOLTIP = "1d3a60c8"
 
 # Editors are the content of glass "cards": panes of glass the window draws over the frosted window
 # background (see `glass_card_draw()`). Their backgrounds only tint the glass a little. Content
 # where colors matter (3D viewport, image editor, node canvas, sequencer) is opaque and neutral.
 EDITOR_LIGHT = "1c3d6647"  # Properties, outliner, file browser, preferences...
 EDITOR_DARK = "142c4c70"   # Timelines, graph, text...
-EDITOR_OPAQUE = "15243bff" # Editors that are always drawn opaque (the sequencer).
+# Frosted rather than clear glass, where more see-through would hurt: behind nodes, around images,
+# behind code, strips and tooltips. Only the 3D viewport and the sequencer preview are opaque.
+FROSTED_DARK = "182937d9"   # Node canvas, 85%.
+FROSTED_IMAGE = "2b2f37cc"  # Around images in the image editor, nearly neutral, 80%.
 HEADER = EDITOR_LIGHT      # Headers are part of their editor's card.
 HEADER_DARK = EDITOR_DARK
 HEADER_OVERLAP = "2a4a7899"
@@ -113,9 +116,9 @@ THEME = {
         "panel_active": ACCENT,
     },
     "regions": {
-        "asset_shelf": {"back": "1c3d66b8", "header_back": "1c3d66b8"},
-        "channels": {"back": "142c4c85", "text": TEXT_DIM, "text_selected": WHITE},
-        "scrubbing": {"back": "142c4c99", "text": TEXT_DIM},
+        "asset_shelf": {"back": "1c3d6680", "header_back": "1c3d6680"},
+        "channels": {"back": "142c4c5c", "text": TEXT_DIM, "text_selected": WHITE},
+        "scrubbing": {"back": "142c4c66", "text": TEXT_DIM},
         # Used for the glass base of panels in overlapping side-bars, keep the region itself clear.
         "sidebars": {"back": "2a4a7400", "tab_back": "1f3a6152"},
     },
@@ -156,10 +159,10 @@ THEME = {
     "space_info": {"back": EDITOR_DARK, "header": HEADER_DARK, "info_selected": "2f6fb8ff"},
     "space_action": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "34557fff", "anim_active": "2f6fb866"},
     "space_nla": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "34557fff"},
-    "space_sequencer": {"back": EDITOR_OPAQUE, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0e1a2cff"},
-    "space_image": {"back": "303030ff", "header": HEADER_DARK},
-    # Code needs calm glass: mostly opaque behind the text.
-    "space_text": {"back": "142c4cd6", "header": HEADER_DARK, "shade2": "2a4466e6", "line_numbers": "7f95b0ff", "grid": "0e1726ff"},
+    "space_sequencer": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "34557fff"},
+    "space_image": {"back": FROSTED_IMAGE, "header": HEADER_DARK},
+    # Code needs calm glass: frosted (72%) behind the text.
+    "space_text": {"back": "142c4cb8", "header": HEADER_DARK, "shade2": "2a4466e6", "line_numbers": "7f95b0ff", "grid": "0e1726ff"},
     "space_outliner": {
         "back": EDITOR_LIGHT,
         "header": HEADER,
@@ -173,8 +176,8 @@ THEME = {
         "text": TEXT,
     },
     "space_node": {
-        # The node canvas is an opaque dark card like in the mockups, nodes sit on it.
-        "back": "182937ff",
+        # The node canvas is a dark frosted card like in the mockups, nodes sit on it.
+        "back": FROSTED_DARK,
         "header": HEADER_DARK,
         "grid": "ffffff14",
         "syntaxl": "1d3246f2",   # Node backdrop.
@@ -196,7 +199,7 @@ THEME = {
         "nodeclass_attribute": "3a4a9aff",
     },
     "space_preferences": {"back": EDITOR_LIGHT, "header": HEADER, "match": ACCENT},
-    "space_console": {"back": "142c4cd6", "header": HEADER_DARK},
+    "space_console": {"back": "142c4cb8", "header": HEADER_DARK},
     "space_clip": {"back": EDITOR_DARK, "header": HEADER_DARK},
     "space_topbar": {"back": BAR, "header": BAR},
     "space_statusbar": {"back": BAR, "header": BAR, "text": TEXT_DIM, "header_text": TEXT_DIM},
