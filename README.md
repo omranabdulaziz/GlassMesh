@@ -127,8 +127,8 @@ pre-compiled libraries (several GB) and takes a while, later builds are much fas
 ### Windows
 
 1. Install:
-   - [Visual Studio 2022](https://visualstudio.microsoft.com/) (the free Community edition works)
-     with the **Desktop development with C++** workload.
+   - [Visual Studio](https://visualstudio.microsoft.com/) 2026, or 2022 version 17.14 or newer
+     (the free Community edition works), with the **Desktop development with C++** workload.
    - [Git for Windows](https://git-scm.com/download/win) (it includes Git LFS).
    - [CMake](https://cmake.org/download/) (add it to the `PATH` when asked).
 
@@ -149,7 +149,8 @@ pre-compiled libraries (several GB) and takes a while, later builds are much fas
    make
    ```
 
-4. Run it: `C:\glassmesh-git\build_windows_x64_vc17_Release\bin\Release\glassmesh.exe`.
+4. Run it: `C:\glassmesh-git\build_windows_x64_vc18_Release\bin\Release\glassmesh.exe`
+   (the folder is `build_windows_x64_vc17_Release` with Visual Studio 2022).
 
 ### Updating
 

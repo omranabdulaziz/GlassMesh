@@ -94,7 +94,8 @@ sharper and faster). The viewport shows Blender's default scene.
   `source/creator/CMakeLists.txt`, `tests/CMakeLists.txt`, `build_files/cmake/testing.cmake`,
   `GNUmakefile`, `build_files/windows/find_blender.cmd`, `intern/cycles/app/CMakeLists.txt`,
   `source/creator/blender_launcher_win32.c`, `source/blender/blenlib/intern/system_win32.cc`,
-  `source/blender/blenlib/intern/winstuff.cc`, `intern/ghost/intern/GHOST_WindowWin32.cc`.
+  `source/blender/blenlib/intern/winstuff.cc`, `intern/ghost/intern/GHOST_WindowWin32.cc`,
+  the Windows troubleshooting scripts `release/windows/batch/*.cmd`.
 - **Platform metadata:** `release/windows/icons/winblender.rc` (version info),
   `release/darwin/Blender.app/Contents/Info.plist` (+ thumbnailer plist, `platform_apple.cmake`,
   `blendthumb/src/thumbnail_provider.mm`), `release/freedesktop/blender.desktop` (installed as
@@ -112,6 +113,9 @@ sharper and faster). The viewport shows Blender's default scene.
 - **GitHub page:** removed `.github/README.md` (Blender's mirror notice, which GitHub showed instead
   of `README.md`), GlassMesh pull request template.
 
+Not changed: internal code, module and target names, the Python API (`bpy`), the `.blend` file
+format and its identifiers, all copyright notices and license files.
+
 ### 3. Test builds (GitHub Actions)
 
 - `.github/workflows/glassmesh_build.yml` – builds Linux x64, macOS arm64 and Windows x64 on
@@ -119,23 +123,33 @@ sharper and faster). The viewport shows Blender's default scene.
 - `tools/glassmesh/ci_fetch.sh` – downloads the Git LFS files and Blender's pre-compiled
   libraries, like `make update`.
 
-The workflow was checked with `actionlint` and `shellcheck`. Its first run started with the push of
-the workflow: <https://github.com/omranabdulaziz/GlassMesh/actions/workflows/glassmesh_build.yml>.
+**First run** ([run 1](https://github.com/omranabdulaziz/GlassMesh/actions/runs/36546591783),
+commit `adea7fd2`): all three platforms built successfully.
 
-Not changed: internal code, module and target names, the Python API (`bpy`), the `.blend` file
-format and its identifiers, all copyright notices and license files.
+| Platform | Runner | Build time | Package | Compiler warnings |
+|---|---|---|---|---|
+| Linux x64 | Ubuntu 24.04, GCC 14 | 69 min | 286 MB `.tar.xz` | 4, all in unchanged Blender code |
+| macOS arm64 | macOS 15, Xcode 16.4 | 43 min | 296 MB `.zip` | none |
+| Windows x64 | Windows Server 2025, Visual Studio 2026 | 126 min | 293 MB `.zip` | 1, in unchanged Blender code |
+
+So the Windows- and macOS-only GlassMesh code compiles. The Linux build was downloaded and
+tested here (software OpenGL): `glassmesh --version`, the splash, the glass interface, the
+separate `~/.config/GlassMesh` folder, a Cycles render and saving/re-opening a `.blend` file all
+work. It is a full build (Cycles, FFmpeg, USD, ...), unlike the "lite" local build. The macOS
+and Windows builds were not started (no Mac or Windows machine here).
+
+The Windows package showed that the troubleshooting scripts (`blender_debug_gpu.cmd`, ...) still
+started `blender.exe`, now fixed, and that build tools were included in all packages, now left
+out. The next run picks up both.
 
 ## What I could not do (and why)
 
-- **Build or run on Windows and macOS.** Only a Linux build was possible here. The Windows- and
-  macOS-only changes (executable names, launcher, file registration, `Info.plist`, config folder
-  code in `GHOST_SystemPathsWin32.cc` / `GHOST_SystemPathsCocoa.mm`) are small and were checked by
-  reading, but never compiled.
-- **Full Blender build with its official libraries.** The network here blocks
-  `projects.blender.org`, so Blender's pre-compiled libraries and Git LFS files could not be
-  downloaded. A "lite" build (no Cycles, FFmpeg, USD, ...) was made with a mix of system and
-  official release libraries instead. None of the GlassMesh changes touch the disabled features.
-  The changed C/C++ files compile without warnings.
+- **Run on Windows and macOS.** They build on GitHub Actions (see above), but they couldn't be
+  started here. The Windows- and macOS-only behavior (launcher, file registration, taskbar/dock,
+  `Info.plist`, config folders) is untested.
+- **Full local build.** The network here blocks `projects.blender.org`, so the local development
+  build was a "lite" build (no Cycles, FFmpeg, USD, ...) with a mix of system and official release
+  libraries. The full builds were made on GitHub Actions instead.
 - **Test on real GPUs.** Everything was checked with Mesa's software OpenGL renderer (llvmpipe).
   The **Metal** (macOS) and **Vulkan** backends were not tested. The frosted backdrop copies the
   window frame-buffer (`GPU_framebuffer_blit`), and on those backends that path is the first thing
