@@ -93,6 +93,8 @@ jobs:
         run: |
           name="glassmesh-${GLASSMESH_VERSION}-linux-x64-${GITHUB_SHA::8}"
           mv ../build_linux/bin "../${name}"
+          # Tools only used while building, not part of the application.
+          (cd "../${name}" && rm -f datatoc makesdna makesrna msgfmt shader_tool zstd_compress)
           tar -C .. -cf - "${name}" | xz -T0 -6 > "${name}.tar.xz"
           ls -lh "${name}.tar.xz"
 
@@ -193,6 +195,10 @@ jobs:
           build_dirs=(../build_windows_x64_vc*_Release)
           build_dir="${build_dirs[0]}"
           mv "${build_dir}/bin/Release" "../${name}"
+          # Tools only used while building and import libraries, not part of the application.
+          # `blender.pdb` is kept, it gives readable crash logs.
+          (cd "../${name}" && rm -f datatoc.* makesdna.* makesrna.* msgfmt.* shader_tool.* \
+            zstd_compress.* glassmesh.exp glassmesh.lib BlendThumb.lib blender_cpu_check.lib)
           7z a -tzip -mx=6 -mmt=on "${name}.zip" "../${name}" > /dev/null
           ls -lh "${name}.zip"
 
