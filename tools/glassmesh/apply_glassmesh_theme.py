@@ -74,7 +74,8 @@ THEME = {
         "wcol_tool": widget(GLASS_OUTLINE, ACCENT, GLASS_BUTTON, ACCENT, WHITE, TEXT, WHITE, 0.4),
         # Every tool is its own small glass tile (see `widget_toolbar_item_glass`).
         "wcol_toolbar_item": widget("ffffff4d", "ffffff66", "9ebde66b", ACCENT, "ffffffe6", TEXT, WHITE, 0.4),
-        "wcol_text": widget(GLASS_OUTLINE, ACCENT, GLASS_FIELD, "0a1a30bf", "ffffff40", TEXT, WHITE, 0.5),
+        # While typing, a field is lighter glass with an accent ring, and selected text is blue.
+        "wcol_text": widget(GLASS_OUTLINE, ACCENT, GLASS_FIELD, "ffffff2b", "3a8ee6a6", TEXT, WHITE, 0.5),
         "wcol_radio": widget(GLASS_OUTLINE, "ffffff4d", GLASS_FIELD, ACCENT, WHITE, TEXT, WHITE, 0.4),
         "wcol_option": widget("ffffff4d", ACCENT, GLASS_FIELD, ACCENT, WHITE, TEXT, WHITE, 0.35),
         "wcol_toggle": widget(GLASS_OUTLINE, "ffffff4d", GLASS_BUTTON, ACCENT, WHITE, TEXT, WHITE, 0.4),
@@ -157,7 +158,8 @@ THEME = {
     "space_nla": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "34557fff"},
     "space_sequencer": {"back": EDITOR_OPAQUE, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0e1a2cff"},
     "space_image": {"back": "303030ff", "header": HEADER_DARK},
-    "space_text": {"back": EDITOR_DARK, "header": HEADER_DARK, "shade2": "2a4466e6", "line_numbers": "7f95b0ff", "grid": "0e1726ff"},
+    # Code needs calm glass: mostly opaque behind the text.
+    "space_text": {"back": "142c4cd6", "header": HEADER_DARK, "shade2": "2a4466e6", "line_numbers": "7f95b0ff", "grid": "0e1726ff"},
     "space_outliner": {
         "back": EDITOR_LIGHT,
         "header": HEADER,
@@ -194,7 +196,7 @@ THEME = {
         "nodeclass_attribute": "3a4a9aff",
     },
     "space_preferences": {"back": EDITOR_LIGHT, "header": HEADER, "match": ACCENT},
-    "space_console": {"back": EDITOR_DARK, "header": HEADER_DARK},
+    "space_console": {"back": "142c4cd6", "header": HEADER_DARK},
     "space_clip": {"back": EDITOR_DARK, "header": HEADER_DARK},
     "space_topbar": {"back": BAR, "header": BAR},
     "space_statusbar": {"back": BAR, "header": BAR, "text": TEXT_DIM, "header_text": TEXT_DIM},
