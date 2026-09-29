@@ -37,13 +37,14 @@ GLASS_FIELD = "ffffff1c"   # Light translucent field (number/text/checkbox backg
 GLASS_FIELD_SEL = "ffffff30"
 GLASS_BUTTON = "ffffff26"  # Light translucent button.
 GLASS_OUTLINE = "ffffff33" # Soft white edge.
-GLASS_MENU = "274a74d0"    # Menus and popups (~80% opaque, blurred behind).
+GLASS_MENU = "2a5288b8"    # Menus and popups (~72% opaque, blurred and made vivid behind).
 GLASS_TOOLTIP = "1d3a60e0"
 
-# Editors are glass "cards" over the frosted window background (the blurred wallpaper, tinted with
-# `editor_border`). Their alpha is how much of it shows through.
-EDITOR_LIGHT = "1c3d66a6"  # Properties, outliner, file browser, preferences...
-EDITOR_DARK = "142c4cc4"   # Timelines, graph, text...
+# Editors are the content of glass "cards": panes of glass the window draws over the frosted window
+# background (see `glass_card_draw()`). Their backgrounds only tint the glass a little. Content
+# where colors matter (3D viewport, image editor, node canvas, sequencer) is opaque and neutral.
+EDITOR_LIGHT = "1c3d6647"  # Properties, outliner, file browser, preferences...
+EDITOR_DARK = "142c4c70"   # Timelines, graph, text...
 EDITOR_OPAQUE = "15243bff" # Editors that are always drawn opaque (the sequencer).
 HEADER = EDITOR_LIGHT      # Headers are part of their editor's card.
 HEADER_DARK = EDITOR_DARK
@@ -92,11 +93,11 @@ THEME = {
         "wcol_pie_menu": widget("ffffff40", "ffffff40", "274a74e0", ACCENT, "ffffff66", TEXT, WHITE, 0.5),
         "link": "7fbfffff",
         "widget_emboss": "00000014",
-        "menu_shadow_fac": 0.35,
-        "menu_shadow_width": 16,
+        "menu_shadow_fac": 0.55,
+        "menu_shadow_width": 22,
         # The frosted window background (the blurred wallpaper) is tinted with this color, its
         # alpha is the amount (see `interface_glass.cc`). It also shows in the gaps between editors.
-        "editor_border": "c9ddf466",
+        "editor_border": "c9ddf447",
         "editor_outline": "ffffff38",
         "editor_outline_active": "ffffff66",
         "icon_saturation": 1.0,
@@ -112,10 +113,10 @@ THEME = {
     },
     "regions": {
         "asset_shelf": {"back": "1c3d66b8", "header_back": "1c3d66b8"},
-        "channels": {"back": "142c4cd0", "text": TEXT_DIM, "text_selected": WHITE},
-        "scrubbing": {"back": "142c4ce0", "text": TEXT_DIM},
+        "channels": {"back": "142c4c85", "text": TEXT_DIM, "text_selected": WHITE},
+        "scrubbing": {"back": "142c4c99", "text": TEXT_DIM},
         # Used for the glass base of panels in overlapping side-bars, keep the region itself clear.
-        "sidebars": {"back": "2a4a7400", "tab_back": "1f3a6199"},
+        "sidebars": {"back": "2a4a7400", "tab_back": "1f3a6152"},
     },
     "common": {
         # Channel rows are light glass bands instead of dark gray ones. Some are drawn opaque in the
@@ -138,16 +139,15 @@ THEME = {
         "match": ACCENT,
     },
     "space_view3d": {
-        # Used when the glass effect is disabled (the viewport background is the glass wallpaper
-        # otherwise, `back_grad` is the tint over it).
-        "back": "4a5e78ff",
-        "back_grad": "14243aff",
-        "background_type": 3,
+        # The viewport is content: an opaque, neutral gray gradient, so colors are seen as they are.
+        "back": "454545ff",
+        "back_grad": "2e2e2eff",
+        "background_type": 1,
         "header": HEADER_OVERLAP,
         "text": TEXT,
         "title": WHITE,
-        "grid": "ffffff24",
-        "grid_major": "ffffff3d",
+        "grid": "54545480",
+        "grid_major": "545454ff",
     },
     "space_file": {"back": EDITOR_LIGHT, "header": HEADER, "hilite": ACCENT, "row_alternate": "ffffff05"},
     # Grid lines are drawn opaque: a slightly lighter blue than the editor instead of near black.
@@ -156,7 +156,7 @@ THEME = {
     "space_action": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "34557fff", "anim_active": "2f6fb866"},
     "space_nla": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "34557fff"},
     "space_sequencer": {"back": EDITOR_OPAQUE, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0e1a2cff"},
-    "space_image": {"back": EDITOR_DARK, "header": HEADER_DARK},
+    "space_image": {"back": "303030ff", "header": HEADER_DARK},
     "space_text": {"back": EDITOR_DARK, "header": HEADER_DARK, "shade2": "2a4466e6", "line_numbers": "7f95b0ff", "grid": "0e1726ff"},
     "space_outliner": {
         "back": EDITOR_LIGHT,
@@ -171,10 +171,11 @@ THEME = {
         "text": TEXT,
     },
     "space_node": {
-        "back": EDITOR_DARK,
+        # The node canvas is an opaque dark card like in the mockups, nodes sit on it.
+        "back": "182937ff",
         "header": HEADER_DARK,
-        "grid": "ffffff17",
-        "syntaxl": "284874eb",   # Node backdrop.
+        "grid": "ffffff14",
+        "syntaxl": "1d3246f2",   # Node backdrop.
         "node_outline": "ffffff33",
         "syntaxn": "c83a55ff",   # Input nodes.
         "syntaxv": "2f86c8ff",   # Converter nodes.
