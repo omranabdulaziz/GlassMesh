@@ -230,7 +230,7 @@ static void draw_button_sections_glass(const ARegion *region,
   float bg_color[4];
   theme::get_color_4fv(colorid, bg_color);
   /* Make sure the pills read as glass (and get the frosted backdrop). */
-  bg_color[3] = std::max(bg_color[3], 0.6f);
+  bg_color[3] = std::max(bg_color[3], 0.55f);
   float outline[4] = {1.0f, 1.0f, 1.0f, 0.1f};
 
   const float inset_x = 4.0f * UI_SCALE_FAC / aspect;

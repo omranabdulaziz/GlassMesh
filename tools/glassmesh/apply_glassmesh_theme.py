@@ -36,7 +36,7 @@ GLASS_FIELD = "10203873"   # Dark translucent field (number/text/checkbox backgr
 GLASS_FIELD_SEL = "102038a6"
 GLASS_BUTTON = "ffffff1f"  # Light translucent button.
 GLASS_OUTLINE = "ffffff24" # Soft white edge.
-GLASS_MENU = "1f3553c8"    # Menus and popups (~78% opaque, blurred behind).
+GLASS_MENU = "1f3553b8"    # Menus and popups (~72% opaque, blurred behind).
 GLASS_TOOLTIP = "18293fdc"
 
 EDITOR_LIGHT = "2a4c7a8c"  # Light glass editors: properties, outliner, file browser...

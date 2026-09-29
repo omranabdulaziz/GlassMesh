@@ -1275,7 +1275,7 @@ static void panel_draw_softshadow(const rctf *box_rect,
 static void panel_glass_overlap_color_get(float r_color[4])
 {
   theme::get_color_4fv(TH_BACK, r_color);
-  r_color[3] = std::max(r_color[3], 0.66f);
+  r_color[3] = std::max(r_color[3], 0.58f);
 }
 
 /** GlassMesh: tool-bars over the viewport float on a rounded glass pill. */
