@@ -60,6 +60,8 @@ sharper and faster). The viewport shows Blender's default scene.
   *Glass* background type (`TH_BACKGROUND_GLASS` in `makesdna/DNA_theme_types.h`) leaves the
   background transparent, the image editor leaves the area around the image transparent.
 - `editors/space_node/node_draw.cc` – the node editor clears its background with the theme alpha.
+- `overlay_grid.hh`, `shaders/overlay_grid_frag.glsl` – `GRID_GLASS`: translucent grid colors aren't
+  drawn dashed, and the floor grid fades out sooner towards the horizon.
 
 **Window compositing** (`source/blender/windowmanager/`)
 

@@ -18,6 +18,8 @@
 
 #include "ED_image.hh"
 #include "ED_view3d.hh"
+
+#include "UI_glass.hh"
 #include "GPU_texture.hh"
 
 #include "draw_shader_shared.hh"
@@ -287,6 +289,11 @@ class Grid : Overlay {
     /* Disable grid rendering when no axis or grid is enabled. */
     if (grid_flag_ == 0 && axis_flag_ == 0) {
       return false;
+    }
+
+    if (ui::glass_enabled()) {
+      grid_flag_ |= (grid_flag_ ? GRID_GLASS : OVERLAY_GridBits(0));
+      axis_flag_ |= (axis_flag_ ? GRID_GLASS : OVERLAY_GridBits(0));
     }
 
     /* Query grid scales from unit/scaling; this range suffices for user-visible levels. */

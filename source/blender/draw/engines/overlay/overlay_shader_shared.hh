@@ -50,7 +50,9 @@ enum [[host_shared]] OVERLAY_GridBits : uint32_t {
   GRID_SIMA = (1u << 9u),            /* Grid is in SpaceImage view. */
   GRID_CAMERA = (1u << 10u),         /* Grid is shown in selected camera. */
   GRID_OVER_IMAGE = (1u << 11u),     /* Grid is shown in front of SpaceImage, not behind. */
-  GRID_BEHIND_GEOMETRY = (1u << 12u) /* Grid is shown behind geometry, on the far plane. */
+  GRID_BEHIND_GEOMETRY = (1u << 12u), /* Grid is shown behind geometry, on the far plane. */
+  /* GlassMesh: translucent theme colors over the glass viewport, see `overlay_grid_frag.glsl`. */
+  GRID_GLASS = (1u << 13u),
 };
 #ifndef GPU_SHADER
 ENUM_OPERATORS(OVERLAY_GridBits)

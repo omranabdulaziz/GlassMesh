@@ -255,3 +255,7 @@ unchanged. Where these decisions replace earlier ones, the earlier number is giv
     window background is the alpha of the theme's *Editor Border* color. The preferences only
     show that color's RGB, so the amount can only be changed in `apply_glassmesh_theme.py` (or the
     built-in default theme). The color itself can be edited as usual.
+62. **A quieter 3D grid.** Blender draws grid lines with less than 10% opacity dashed, which assumes
+    its opaque gray grid colors. The glass theme uses translucent white, so with glass the dashes
+    follow how far a line has faded instead of its opacity, and the floor grid fades out sooner
+    towards the horizon, where it otherwise becomes a dense mesh of lines over the wallpaper.

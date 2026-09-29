@@ -46,6 +46,7 @@ void main()
   else {
     out_color = mix(theme.colors.grid, theme.colors.grid_emphasis, vertex_out_flat.emphasis);
   }
+  float base_alpha = out_color.a;
 
   /* Fragment alpha. */
   out_color.a *= vertex_out_flat.alpha;
@@ -62,6 +63,10 @@ void main()
     /* Add fade at steep angles for contents of the floor plane. */
     if (vertex_out.pos.z == 0.0f) {
       out_color.a *= 1.0f - pow3f(1.0f - abs(V.z));
+      /* GlassMesh: the far floor is a dense mesh of lines over the wallpaper, fade it sooner. */
+      if (flag_test(grid_flag, GRID_GLASS)) {
+        out_color.a *= smoothstep(0.1f, 0.45f, abs(V.z));
+      }
     }
 
     /* Add fade towards camera clip plane. */
@@ -98,7 +103,11 @@ void main()
   constexpr float fade_start = 0.1f; /* Cutoff for dash fade; alpha above is fully drawn. */
   constexpr float fade_rcp = 1.0f / fade_start;
   float dist = distance(edge_start, edge_pos);
-  if (out_color.a < fade_start && fade_rcp * out_color.a < fract(dist / dash_width)) {
+  /* GlassMesh: the glass theme uses translucent grid colors, only lines that are faded out
+   * (rather than translucent) are drawn dashed, otherwise the whole grid would be. */
+  float stipple_alpha = flag_test(grid_flag, GRID_GLASS) ? out_color.a / max(base_alpha, 1e-4f) :
+                                                           out_color.a;
+  if (stipple_alpha < fade_start && fade_rcp * stipple_alpha < fract(dist / dash_width)) {
     gpu_discard_fragment();
   }
 
