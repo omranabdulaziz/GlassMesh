@@ -1,0 +1,6 @@
+# GlassMesh: Git LFS objects of the upstream Blender sources (startup file, icons, studio
+# lights, ...) are downloaded from Blender's own server. GlassMesh's own binary assets are
+# regular git files (see `.gitattributes`), so nothing needs to be uploaded to LFS.
+[lfs]
+	url = https://projects.blender.org/blender/blender.git/info/lfs
+	pushurl = https://github.com/omranabdulaziz/GlassMesh.git/info/lfs

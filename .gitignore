@@ -1,5 +1,7 @@
 # generic files to ignore
 .*
+# GlassMesh: Git LFS configuration (upstream LFS server).
+!/.lfsconfig
 
 # python temp paths
 __pycache__/
