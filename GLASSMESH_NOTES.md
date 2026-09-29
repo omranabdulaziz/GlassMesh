@@ -10,7 +10,7 @@ Foundation.
 ## Preview
 
 Screenshots from the verification build (Linux, software OpenGL, so a real GPU looks the same but
-sharper and faster). The viewport shows Blender's default scene in front of the built-in wallpaper.
+sharper and faster). The viewports show Blender's default scenes on a neutral background.
 
 | | |
 |---|---|
@@ -19,7 +19,7 @@ sharper and faster). The viewport shows Blender's default scene in front of the 
 | ![Animation](docs/glassmesh/animation.jpg) | ![Sculpting](docs/glassmesh/sculpting.jpg) |
 | Animation | Sculpting |
 | ![Frosted menu](docs/glassmesh/frosted_menu.jpg) | ![Preferences](docs/glassmesh/preferences.jpg) |
-| Frosted menu over the glass 3D viewport | Preferences, with switches and the Glass settings |
+| Frosted menu over the 3D viewport | Preferences, with switches and the Glass settings |
 | ![About](docs/glassmesh/about.jpg) | ![Glass off](docs/glassmesh/glass_off_blender_dark.jpg) |
 | About GlassMesh | Glass effect off + Blender Dark preset = classic look |
 
@@ -32,7 +32,7 @@ sharper and faster). The viewport shows Blender's default scene in front of the 
 - `source/blender/makesdna/DNA_userdef_types.h` – `UserDef.glass_flag` (`USER_GLASS_DISABLE`,
   `USER_GLASS_NO_BLUR`, stored in existing padding) and `UserDef.glass_wallpaper` (image path).
 - `source/blender/makesrna/intern/rna_userdef.cc` – `use_glass_effect`, `use_glass_blur`,
-  `glass_wallpaper`, and the new *Glass* viewport background type.
+  `glass_wallpaper`.
 - `scripts/startup/bl_ui/space_userpref.py` – the settings, and the glass style preferences
   navigation.
 
@@ -42,35 +42,34 @@ sharper and faster). The viewport shows Blender's default scene in front of the 
   lake rendered by `tools/glassmesh/make_wallpaper.py` (Cycles). Embedded in the executable
   (`editors/datafiles/CMakeLists.txt`, `ED_datafiles.h`).
 - `source/blender/editors/interface/interface_glass.cc` (new) – loads the built-in or custom
-  wallpaper, makes its blurred ("frosted") copy, draws the frosted window background, the editor
-  gaps and the 3D viewport backdrop, and computes the title bar color.
+  wallpaper, makes its blurred ("frosted") copy, draws the frosted window background and the
+  editors as panes of glass (`glass_card_draw()`), and computes the title bar color.
 
 **Shaders** (`source/blender/gpu/`)
 
-- `shaders/infos/gpu_shader_2D_glass_infos.hh`, `shaders/gpu_shader_2D_glass_*.glsl` – two new
-  built-in shaders: `GPU_SHADER_2D_GLASS_BACKDROP` (live frosted blur + tint + grain, masked by a
-  region's alpha) and `GPU_SHADER_2D_GLASS_WALLPAPER` (draws and pre-blurs the wallpaper, also with
-  the editor-gap geometry).
+- `shaders/infos/gpu_shader_2D_glass_infos.hh`, `shaders/gpu_shader_2D_glass_*.glsl` – three new
+  built-in shaders: `GPU_SHADER_2D_GLASS_BACKDROP` (live frosted blur + vibrancy + grain, masked by
+  a region's alpha), `GPU_SHADER_2D_GLASS_WALLPAPER` (draws and pre-blurs the wallpaper) and
+  `GPU_SHADER_2D_GLASS_CARD` (an editor as a pane of glass: drop shadow, body with vibrancy,
+  refraction and a lit bevel, and the edge with the specular rim and rounded corners).
 - `shaders/gpu_shader_2D_widget_base.bsl.hh` – rim highlight and sheen for all widgets.
 - `GPU_shader_builtin.hh`, `intern/gpu_shader_builtin.cc`, `CMakeLists.txt` – registration.
 
-**Glass 3D viewport, image and node editors** (`source/blender/draw/engines/overlay/`)
+**3D viewport** (`source/blender/draw/engines/overlay/`) – content stays opaque (the see-through
+background of test builds was removed: `TH_BACKGROUND_GLASS_LEGACY` in `DNA_theme_types.h` and
+`blenloader/intern/versioning_userdef.cc` turn it into a gradient).
 
-- `overlay_background.hh`, `overlay_shader_shared.hh`, `shaders/overlay_background_frag.glsl` – the
-  *Glass* background type (`TH_BACKGROUND_GLASS` in `makesdna/DNA_theme_types.h`) leaves the
-  background transparent, the image editor leaves the area around the image transparent.
-- `editors/space_node/node_draw.cc` – the node editor clears its background with the theme alpha.
-- `overlay_grid.hh`, `shaders/overlay_grid_frag.glsl` – `GRID_GLASS`: translucent grid colors aren't
-  drawn dashed, and the floor grid fades out sooner towards the horizon.
+- `overlay_grid.hh`, `overlay_shader_shared.hh`, `shaders/overlay_grid_frag.glsl` – `GRID_GLASS`:
+  translucent grid colors aren't drawn dashed, and the floor grid fades out sooner towards the
+  horizon.
 
 **Window compositing** (`source/blender/windowmanager/`)
 
-- `intern/wm_draw_glass.cc` (new) – window capture and live blurred backdrop per region, what is
-  drawn behind glass viewports (the wallpaper for the 3D viewport, a glass card for the image
-  editor).
-- `intern/wm_draw.cc` – draws the frosted window background, blends translucent editors and glass
-  viewports over it, and draws the live frosted backdrop under overlapping regions (headers,
-  tool-bars, side-bars) and floating regions (menus, popups, tool-tips).
+- `intern/wm_draw_glass.cc` (new) – window capture and live blurred backdrop per region, the
+  editors' glass cards (shadows and bodies) before the editors are drawn.
+- `intern/wm_draw.cc` – draws the frosted window background and the glass cards, blends
+  translucent editors over them, and draws the live frosted backdrop under overlapping regions
+  (headers, tool-bars, side-bars) and floating regions (menus, popups, tool-tips).
 - `intern/wm_window.cc` – title bar color (macOS, Windows).
 - `wm_draw.hh`, `intern/wm_init_exit.cc` (GPU resources freed at exit), `CMakeLists.txt`.
 
@@ -82,16 +81,17 @@ sharper and faster). The viewport shows Blender's default scene in front of the 
 - `interface/interface_layout.cc`, `include/UI_interface_layout.hh`, `include/UI_interface_c.hh` –
   which checkboxes are drawn as switches (`BUT_GLASS_SWITCH`).
 - `interface/interface_draw.cc` – `draw_roundbox_4fv_glass()`, all 12 widget parameters uploaded.
-- `interface/interface_panel.cc` – panels as glass cards, panel rims.
+- `interface/interface_panel.cc` – panels as glass cards, panel rims, headerless panels on glass.
 - `interface/interface_button_sections.cc` – header button groups as floating glass pills.
 - `interface/interface_icons.cc` – tool icons aren't inverted for translucent tool buttons.
-- `interface/resources.cc`, `include/UI_resources.hh` – translucent (pre-multiplied) region
-  background clears with glass, `get_color_back_glass_4fv()`.
-- `screen/screen_draw.cc`, `screen/screen_intern.hh` – editor gaps show the frosted wallpaper, rim
-  on editor outlines, larger corner radius.
+- `interface/resources.cc` – translucent (pre-multiplied) region background clears with glass.
+- `screen/screen_draw.cc`, `screen/screen_intern.hh` – the editors' glass edges (rounded corners
+  and specular rim) instead of the flat gaps, larger corner radius.
+- `screen/area.cc` – margins around the glass cards at the window edges and below the top bar.
 - `space_outliner/outliner_draw.cc` – pill shaped row highlights, no row stripes with glass.
 - `space_view3d/view3d_gizmo_navigate.cc` – glass circles behind the navigation buttons.
-- `space_node/node_intern.hh` – rounder node corners with glass.
+- `space_node/node_intern.hh`, `space_node/node_draw.cc` – rounder node corners and a glass rim
+  along the node outlines.
 - `screen/screen_edit.cc`, `blenloader/intern/versioning_defaults.cc`,
   `scripts/startup/bl_ui/space_topbar.py` – the top bar's single *GlassMesh* application menu.
 
@@ -236,7 +236,8 @@ These can only be changed by you, on github.com:
    right away. Then pick the *Blender Dark* theme preset with glass off, it should look like Blender.
 7. **Wallpaper:** choose your own image in *Preferences > Interface > Display > Wallpaper* (for
    example your desktop wallpaper), then clear the field again for the built-in one. Check the
-   3D viewport background, the gaps between editors and the title bar color.
+   glass editors, the gaps between them and the title bar color. The 3D viewport, image editor
+   and node canvas must never show the wallpaper.
 8. **macOS fonts:** on a fresh start the interface should use the system font (SF Pro). If it looks
    wrong, clear *Preferences > Interface > Text Rendering > Interface Font*.
 9. **Other editors:** Outliner, Properties, node editors, Dope Sheet/Graph Editor, Text Editor,

@@ -198,14 +198,14 @@ unchanged. Where these decisions replace earlier ones, the earlier number is giv
     example the desktop wallpaper, which gets close to the mockups' see-through-to-the-desktop look
     (#4). It is stored in a new `UserDef.glass_wallpaper` path, so unlike #17 the preferences
     struct grows by 1 KB. `.blend` files are not affected.
-47. **A glass 3D viewport.** A new theme background type, *Glass*, is the default. In solid and
+47. **A glass 3D viewport** (removed again, see #64). A new theme background type, *Glass*, is the default. In solid and
     wireframe shading the viewport background is transparent, and the wallpaper shows through,
     slightly softened and tinted with the viewport's *Gradient Low* theme color. This gives the
     mountain scenes behind the models in the mockups. Material preview and rendered shading still
     show the world, and images rendered from the viewport (*View > Viewport Render Image*) keep a
     gradient background. It can be changed per viewport (*Shading > Background: World/Viewport*) or
     in the theme. The *Blender Dark* preset sets Blender's single color again.
-48. **Lighter glass** (revisits #13). Editor cards are a translucent blue (65% opacity) over the
+48. **Lighter glass** (revisits #13, replaced by #65). Editor cards are a translucent blue (65% opacity) over the
     milky frosted wallpaper, and headers have the same color as their card instead of being a
     separate strip. The top bar and status bar are almost clear. Fields and buttons are light
     glass, sliders are blue. It is lighter than version 1, like the mockups, and white text keeps
@@ -243,7 +243,7 @@ unchanged. Where these decisions replace earlier ones, the earlier number is giv
 57. **Glass navigation buttons.** The zoom, pan, camera and projection buttons of the 3D viewport
     are small glass circles, as in the mockups. Blender only shows a circle while hovering them.
 58. **Rounder nodes.** Nodes have a corner radius of 0.32 widget units instead of 0.2.
-59. **Glass node and image editors** (revisits the opaque editors of version 1). The node editor
+59. **Glass node and image editors** (reverted, see #64) (revisits the opaque editors of version 1). The node editor
     and the image/UV editor are drawn through a color-managed viewport, which is why version 1 kept
     them opaque. Their backgrounds are now translucent cards like the other editors: the node
     editor clears its background with the theme alpha, and the image editor leaves the area around
@@ -259,3 +259,46 @@ unchanged. Where these decisions replace earlier ones, the earlier number is giv
     its opaque gray grid colors. The glass theme uses translucent white, so with glass the dashes
     follow how far a line has faded instead of its opacity, and the floor grid fades out sooner
     towards the horizon, where it otherwise becomes a dense mesh of lines over the wallpaper.
+
+## Third pass: Liquid Glass, not Mica
+
+Compared side by side with the mockups, the second pass was judged "more like Mica than Liquid
+Glass", and making the 3D viewport see-through was the one thing that should not have been
+copied: it changes the colors of what is being modeled, which defeats the purpose of the
+software. The review also asked for strong edge highlights, deeper shadows and lighter, more vivid
+glass.
+
+63. **Why the second pass looked like Mica.** Glass was used as the background of the whole
+    application: one wallpaper, blurred once, under everything, with every editor filled with a
+    flat translucent navy on top. That is how Mica works. A flat dark color with alpha can only
+    darken and gray what is behind it (measured: properties editor (53, 90, 125) against the
+    mockup's (85, 141, 172)), and nothing drew the things that make Apple's glass read as glass:
+    bright rims along the edges, light caught in the thickness of the pane, refraction at the
+    edge, and shadows that separate the layers. Liquid Glass is the reverse: content stays
+    opaque and accurate, and glass is a layer of objects floating over it.
+64. **Content is opaque** (reverts #47 and #59). The 3D viewport has a neutral gray gradient
+    (#454545 to #2e2e2e), the image editor Blender's #303030, and the node canvas an opaque dark
+    blue, like the mockups' node editors. The *Glass* viewport background type is removed,
+    preferences that used it get a gradient. The landscapes behind the models in the mockups are
+    the scenes' worlds, which the viewport shows as usual in material preview and rendered
+    shading.
+65. **Editors are panes of glass drawn by the window** (replaces the flat tints of #48). The window
+    draws every editor as a card with a new shader in three steps: a soft drop shadow on the
+    window background; the glass itself (the blurred wallpaper made more vivid and a little
+    lighter, bent towards the edge where it also shows a sharper image of what is behind, and
+    light along the inside of the edge); then, after the editor, the rounded corners and a
+    specular rim, strongest on the edge facing the light (upper left) and again, weaker, on the
+    opposite edge, like the reference images. Editor backgrounds are now mostly clear (28% to
+    44%) and only tint the glass, the theme still decides their color.
+66. **Margins.** The cards are 8 px from the window edges and 4 px below the top bar (Blender uses
+    2 px and 1 px), so the window glass shows around them like in the mockups. This only moves
+    the editors' edges by a few pixels.
+67. **Vivid window glass.** The window background is more saturated (1.6x instead of 1.25x) and
+    less tinted (28% instead of 40%), which was the source of the gray, milky look. The cards'
+    glass has a light blue milk (16%) instead, so they stay light over the dark lake at the bottom
+    of the wallpaper.
+68. **Stronger edges on small glass.** Buttons, fields, tool tiles and panels have a rim twice as
+    bright as before, nodes get the same rim along their outline, menus and popups are lighter
+    (72% instead of 81%) with a more vivid blur behind and a deeper shadow. Panels without a
+    header (like the properties editor's context path) drew the editor color fully opaque, with
+    glass they use the panel glass instead.
