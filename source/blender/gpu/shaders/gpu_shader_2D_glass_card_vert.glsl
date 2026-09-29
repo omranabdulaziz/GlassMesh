@@ -4,7 +4,7 @@
 
 #include "infos/gpu_shader_2D_glass_infos.hh"
 
-VERTEX_SHADER_CREATE_INFO(gpu_shader_2D_glass_wallpaper)
+VERTEX_SHADER_CREATE_INFO(gpu_shader_2D_glass_card)
 
 void main()
 {

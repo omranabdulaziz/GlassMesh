@@ -5,18 +5,21 @@
 /** \file
  * \ingroup edinterface
  *
- * GlassMesh: the wallpaper behind the translucent "glass" interface style, shared between the
- * screen (editor gaps) and window-manager (window compositing) drawing code.
+ * GlassMesh: the wallpaper behind the "glass" interface style and the glass drawn over it, shared
+ * between the screen (editor edges) and window-manager (window compositing) drawing code.
  *
  * The wallpaper is an image (a built-in one, or any image chosen in the preferences) that the
  * interface is drawn over, like a desktop wallpaper behind a frosted window:
  * - The window background and the gaps between editors show a heavily blurred ("frosted") copy.
- * - The 3D viewport can show it (slightly softened) through its background.
+ * - Every editor is a pane of glass ("card") lying on it: a drop shadow, a body that makes what is
+ *   behind it more vivid and bends it near the edge, and a specular rim along the edge.
+ * Content (3D viewport, image editor, node canvas) is opaque, the wallpaper never shows through.
  */
 
 #include <cstring>
 
 #include "BLI_math_base.h"
+#include "BLI_math_vector.h"
 #include "BLI_math_vector_types.hh"
 #include "BLI_rect.h"
 #include "BLI_string.h"
@@ -163,10 +166,6 @@ static void glass_wallpaper_pass(GPUOffScreen *dst, gpu::Texture *src, float lod
   GPU_batch_uniform_4fv(batch, "tint", tint);
   GPU_batch_uniform_4fv(batch, "params", params);
   GPU_batch_uniform_4fv(batch, "blur", blur);
-  GPU_batch_uniform_1b(batch, "border_mode", false);
-  GPU_batch_uniform_1f(batch, "scale", 1.0f);
-  GPU_batch_uniform_1f(batch, "width", 0.0f);
-  GPU_batch_uniform_1i(batch, "cornerLen", 1);
   GPU_batch_texture_bind(batch, "image", src);
   GPU_batch_draw(batch);
   GPU_texture_unbind(src);
@@ -291,32 +290,6 @@ static void glass_wallpaper_uv_transform(const int window_size[2], float r_uv[4]
   r_uv[3] = -((h - dh) * 0.5f) / dh;
 }
 
-static void glass_wallpaper_uniforms(gpu::Batch *batch,
-                                     gpu::Texture *texture,
-                                     const int window_size[2],
-                                     const float tint[4],
-                                     const float params[4],
-                                     bool border_mode)
-{
-  float uv[4];
-  glass_wallpaper_uv_transform(window_size, uv);
-  const float blur[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-
-  GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_GLASS_WALLPAPER);
-  GPU_batch_uniform_4fv(batch, "uv_transform", uv);
-  GPU_batch_uniform_4fv(batch, "tint", tint);
-  GPU_batch_uniform_4fv(batch, "params", params);
-  GPU_batch_uniform_4fv(batch, "blur", blur);
-  GPU_batch_uniform_1b(batch, "border_mode", border_mode);
-  if (!border_mode) {
-    /* Unused in fill mode, but keep them defined. */
-    GPU_batch_uniform_1f(batch, "scale", 1.0f);
-    GPU_batch_uniform_1f(batch, "width", 0.0f);
-    GPU_batch_uniform_1i(batch, "cornerLen", 1);
-  }
-  GPU_batch_texture_bind(batch, "image", texture);
-}
-
 /**
  * The frosted window background: the blurred wallpaper, tinted with the theme's "Editor Border"
  * color (its alpha is the amount), so the look of the gaps between editors can be changed there.
@@ -325,40 +298,109 @@ static void glass_frosted_look(float r_tint[4], float r_params[4])
 {
   theme::get_color_4fv(TH_EDITOR_BORDER, r_tint);
   r_params[0] = 0.0f;
-  r_params[1] = 1.25f;
-  r_params[2] = 1.0f;
+  /* Vivid, like the mockups' window glass: frosted glass saturates what is behind it. */
+  r_params[1] = 1.6f;
+  r_params[2] = 1.08f;
   r_params[3] = 1.6f / 255.0f;
-}
-
-bool glass_wallpaper_shader_bind(gpu::Batch *batch, const int window_size[2], bool border_mode)
-{
-  if (!glass_wallpaper_ensure()) {
-    return false;
-  }
-  float tint[4], params[4];
-  glass_frosted_look(tint, params);
-  glass_wallpaper_uniforms(batch,
-                           GPU_offscreen_color_texture(g_wallpaper.frosted),
-                           window_size,
-                           tint,
-                           params,
-                           border_mode);
-  return true;
 }
 
 void glass_wallpaper_draw(const int window_size[2])
 {
-  gpu::Batch *batch = GPU_batch_preset_quad();
-  if (!glass_wallpaper_shader_bind(batch, window_size, false)) {
+  if (!glass_wallpaper_ensure()) {
     return;
   }
+  float tint[4], params[4], uv[4];
+  glass_frosted_look(tint, params);
+  glass_wallpaper_uv_transform(window_size, uv);
+  const float blur[4] = {0.0f, 0.0f, 0.0f, 0.0f};
   const float rect[4] = {0.0f, 0.0f, float(window_size[0]), float(window_size[1])};
+
+  gpu::Batch *batch = GPU_batch_preset_quad();
+  GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_GLASS_WALLPAPER);
   GPU_batch_uniform_4fv(batch, "rect_geom", rect);
+  GPU_batch_uniform_4fv(batch, "uv_transform", uv);
+  GPU_batch_uniform_4fv(batch, "tint", tint);
+  GPU_batch_uniform_4fv(batch, "params", params);
+  GPU_batch_uniform_4fv(batch, "blur", blur);
+  GPU_batch_texture_bind(batch, "image", GPU_offscreen_color_texture(g_wallpaper.frosted));
 
   const GPUBlend old_blend = GPU_blend_get();
   GPU_blend(GPU_BLEND_NONE);
   GPU_batch_draw(batch);
   GPU_blend(old_blend);
+}
+
+/**
+ * The glass of the editor cards: the frosted wallpaper behind them, more vivid and a little
+ * lighter than the window background around them. Editors tint it with their (mostly clear) theme
+ * background color.
+ */
+static void glass_card_look(float r_tint[4], float r_look[4])
+{
+  /* A milky light blue, it keeps cards light over dark parts of the wallpaper too. */
+  const float milk[4] = {0.60f, 0.76f, 0.92f, 0.16f};
+  copy_v4_v4(r_tint, milk);
+  r_look[0] = 1.3f;
+  r_look[1] = 1.04f;
+  r_look[2] = 0.1f;
+  r_look[3] = 1.6f / 255.0f;
+}
+
+bool glass_card_draw(const GlassCardPass pass,
+                     const rcti *card,
+                     const int window_size[2],
+                     const bool active)
+{
+  if (!glass_wallpaper_ensure()) {
+    return false;
+  }
+  const float scale = UI_SCALE_FAC;
+  const float card_rect[4] = {
+      float(card->xmin), float(card->ymin), float(card->xmax + 1), float(card->ymax + 1)};
+  const float card_shape[4] = {glass_editor_radius(), 14.0f * scale, 3.0f * scale, 0.26f};
+
+  float rect_geom[4];
+  copy_v4_v4(rect_geom, card_rect);
+  if (pass == GlassCardPass::Shadow) {
+    const float pad = card_shape[1] + card_shape[2];
+    rect_geom[0] -= pad;
+    rect_geom[1] -= pad;
+    rect_geom[2] += pad;
+    rect_geom[3] += pad;
+  }
+
+  float uv[4];
+  glass_wallpaper_uv_transform(window_size, uv);
+  float frame_tint[4], frame_look[4], card_tint[4], card_look[4];
+  glass_frosted_look(frame_tint, frame_look);
+  /* The frosted look's first parameter is a mip-map level, the card shader takes saturation,
+   * brightness, frost and grain. */
+  const float frame_params[4] = {frame_look[1], frame_look[2], 0.0f, frame_look[3]};
+  glass_card_look(card_tint, card_look);
+  const float optics[4] = {14.0f * scale, 9.0f * scale, 5.0f * scale, 0.09f};
+  const float rim[4] = {1.25f * scale, active ? 0.75f : 0.5f, 0.55f, 2.0f};
+
+  gpu::Batch *batch = GPU_batch_preset_quad();
+  GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_GLASS_CARD);
+  GPU_batch_uniform_4fv(batch, "rect_geom", rect_geom);
+  GPU_batch_uniform_4fv(batch, "card_rect", card_rect);
+  GPU_batch_uniform_4fv(batch, "card_shape", card_shape);
+  GPU_batch_uniform_4fv(batch, "uv_transform", uv);
+  GPU_batch_uniform_4fv(batch, "frame_tint", frame_tint);
+  GPU_batch_uniform_4fv(batch, "frame_look", frame_params);
+  GPU_batch_uniform_4fv(batch, "card_tint", card_tint);
+  GPU_batch_uniform_4fv(batch, "card_look", card_look);
+  GPU_batch_uniform_4fv(batch, "optics", optics);
+  GPU_batch_uniform_4fv(batch, "rim", rim);
+  GPU_batch_uniform_1i(batch, "card_mode", int(pass));
+  GPU_batch_texture_bind(batch, "frosted", GPU_offscreen_color_texture(g_wallpaper.frosted));
+  GPU_batch_texture_bind(batch, "image", g_wallpaper.image);
+
+  const GPUBlend old_blend = GPU_blend_get();
+  GPU_blend(GPU_BLEND_ALPHA_PREMULT);
+  GPU_batch_draw(batch);
+  GPU_blend(old_blend);
+  return true;
 }
 
 bool glass_window_top_color(float r_color[3])
@@ -409,30 +451,6 @@ bool glass_window_top_color(float r_color[3])
     r_color[i] = clamp_f(c + (tint[i] - c) * tint[3], 0.0f, 1.0f);
   }
   return true;
-}
-
-void glass_viewport_backdrop_draw(const rcti *rect, const int window_size[2])
-{
-  if (!glass_wallpaper_ensure()) {
-    return;
-  }
-  /* Slightly softened and darkened, tinted with the 3D viewport's "Gradient Low" theme color, so
-   * objects and overlays stay easy to see. */
-  float tint[4];
-  theme::get_color_type_4fv(TH_BACK_GRAD, SPACE_VIEW3D, tint);
-  tint[3] = 0.22f;
-  const float params[4] = {1.25f, 1.08f, 0.92f, 1.0f / 255.0f};
-
-  gpu::Batch *batch = GPU_batch_preset_quad();
-  glass_wallpaper_uniforms(batch, g_wallpaper.image, window_size, tint, params, false);
-  const float geom[4] = {
-      float(rect->xmin), float(rect->ymin), float(rect->xmax + 1), float(rect->ymax + 1)};
-  GPU_batch_uniform_4fv(batch, "rect_geom", geom);
-
-  const GPUBlend old_blend = GPU_blend_get();
-  GPU_blend(GPU_BLEND_NONE);
-  GPU_batch_draw(batch);
-  GPU_blend(old_blend);
 }
 
 /** \} */

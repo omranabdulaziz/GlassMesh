@@ -1135,8 +1135,10 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
   GPU_clear_color(0, 0, 0, 0);
 #endif
 
-  /* GlassMesh: wallpaper behind (translucent) editors and in the gaps between them. */
+  /* GlassMesh: wallpaper behind (translucent) editors and in the gaps between them, and the
+   * editors' glass cards on it. */
   wm_draw_glass_wallpaper(win);
+  wm_draw_glass_cards(win);
 
   /* Blit non-overlapping area regions. */
   ED_screen_areas_iter (win, screen, area) {
@@ -1149,13 +1151,6 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
         if (wm_draw_glass_region_is_translucent(&region)) {
           /* GlassMesh: blend translucent editors over the wallpaper. */
           wm_draw_region_blend(&region, 0, true);
-        }
-        else if (wm_draw_glass_region_is_glass_viewport(area, &region)) {
-          /* GlassMesh: the wallpaper shows through the viewport's transparent background. */
-          wm_draw_glass_viewport_backdrop(win, area, &region);
-          GPU_blend(GPU_BLEND_ALPHA_PREMULT);
-          wm_draw_region_blit(&region, view);
-          GPU_blend(GPU_BLEND_NONE);
         }
         else {
           /* Blit from off-screen buffer. */

@@ -474,9 +474,9 @@ typedef enum eBackgroundGradientTypes {
   TH_BACKGROUND_SINGLE_COLOR = 0,
   TH_BACKGROUND_GRADIENT_LINEAR = 1,
   TH_BACKGROUND_GRADIENT_RADIAL = 2,
-  /** GlassMesh: transparent, the glass wallpaper shows through (like a linear gradient when the
-   * glass interface style is disabled). */
-  TH_BACKGROUND_GLASS = 3,
+  /** GlassMesh: no longer used (a see-through viewport of test builds), versioned to a linear
+   * gradient. Content editors are always opaque. */
+  TH_BACKGROUND_GLASS_LEGACY = 3,
 } eBackgroundGradientTypes;
 
 /** Set of colors for use as a custom color set for Objects/Bones wire drawing. */

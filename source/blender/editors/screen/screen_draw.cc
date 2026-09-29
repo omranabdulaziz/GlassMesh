@@ -99,21 +99,15 @@ static gpu::Batch *batch_screen_edges_get(int *corner_len)
 /**
  * \brief Screen edges drawing.
  */
-static void drawscredge_area(const ScrArea &area, float edge_thickness, const bool use_glass)
+static void drawscredge_area(const ScrArea &area, float edge_thickness)
 {
   rctf rect;
   BLI_rctf_rcti_copy(&rect, &area.totrct);
   BLI_rctf_pad(&rect, edge_thickness, edge_thickness);
 
   gpu::Batch *batch = batch_screen_edges_get(nullptr);
-  if (use_glass) {
-    /* The program is already bound by the caller (#GPU_SHADER_2D_GLASS_WALLPAPER). */
-    GPU_batch_uniform_4fv(batch, "rect_geom", (float *)&rect);
-  }
-  else {
-    GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_AREA_BORDERS);
-    GPU_batch_uniform_4fv(batch, "rect", (float *)&rect);
-  }
+  GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_AREA_BORDERS);
+  GPU_batch_uniform_4fv(batch, "rect", (float *)&rect);
   GPU_batch_draw(batch);
 }
 
@@ -196,23 +190,36 @@ void ED_screen_draw_edges(wmWindow *win)
 
   GPU_blend(GPU_BLEND_ALPHA);
 
+  /* GlassMesh: editors are panes of glass (see #wm_draw_glass_cards), their edge is the window
+   * background outside the rounded corners and a specular rim along the inside. */
+  const int2 win_size = WM_window_native_pixel_size(win);
+  if (use_glass) {
+    bool drawn = true;
+    for (ScrArea &area : screen->areabase) {
+      drawn = ui::glass_card_draw(
+          ui::GlassCardPass::Edge, &area.totrct, win_size, &area == active_area);
+      if (!drawn) {
+        break;
+      }
+    }
+    if (drawn) {
+      GPU_blend(GPU_BLEND_NONE);
+      GPU_scissor_test(false);
+      return;
+    }
+  }
+
   int verts_per_corner = 0;
   gpu::Batch *batch = batch_screen_edges_get(&verts_per_corner);
 
-  /* GlassMesh: the gaps between editors show the frosted glass wallpaper instead of a flat
-   * color (the flat color is only a fallback when the wallpaper isn't available). */
-  const int2 win_size = WM_window_native_pixel_size(win);
-  const bool use_wallpaper = use_glass && ui::glass_wallpaper_shader_bind(batch, win_size, true);
-  if (!use_wallpaper) {
-    GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_AREA_BORDERS);
-    GPU_batch_uniform_4fv(batch, "color", col);
-  }
+  GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_AREA_BORDERS);
   GPU_batch_uniform_1i(batch, "cornerLen", verts_per_corner);
   GPU_batch_uniform_1f(batch, "scale", shader_scale);
   GPU_batch_uniform_1f(batch, "width", shader_width);
+  GPU_batch_uniform_4fv(batch, "color", col);
 
   for (ScrArea &area : screen->areabase) {
-    drawscredge_area(area, edge_thickness, use_wallpaper);
+    drawscredge_area(area, edge_thickness);
   }
 
   float outline1[4];

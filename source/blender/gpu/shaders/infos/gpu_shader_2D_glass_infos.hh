@@ -23,11 +23,6 @@ GPU_SHADER_INTERFACE_INFO(glass_win_co_iface)
 SMOOTH(float2, win_co)
 GPU_SHADER_INTERFACE_END()
 
-GPU_SHADER_INTERFACE_INFO(glass_wallpaper_iface)
-SMOOTH(float2, win_co)
-SMOOTH(float2, uv_border)
-GPU_SHADER_INTERFACE_END()
-
 /**
  * Frosted glass backdrop.
  *
@@ -61,20 +56,59 @@ DO_STATIC_COMPILATION()
 GPU_SHADER_CREATE_END()
 
 /**
- * Wallpaper: the image the glass interface is drawn over, like a desktop wallpaper behind a
- * frosted window. Used for the frosted window background, the gaps and rounded corners between
- * editors, and the (transparent) 3D viewport background. Also used to pre-blur the wallpaper.
+ * Glass card: an editor drawn as a pane of glass lying over the frosted window background.
  *
- * When `border_mode` is set, the geometry and coverage of #gpu_shader_2D_area_borders is used
- * so only the gaps and rounded corners between editors are filled.
+ * `card_mode` selects what is drawn:
+ * - 0: the soft drop shadow of the card on the window background (drawn before the cards).
+ * - 1: the body of the card: the frosted wallpaper behind it, more vivid and a bit lighter, bent
+ *   (refracted) towards the edge and lit along the inside of its edge (drawn before the editor).
+ * - 2: the edge: the window background outside the rounded corners and a specular rim along
+ *   the inside of the edge (drawn after the editor).
+ * Output is pre-multiplied.
+ */
+GPU_SHADER_CREATE_INFO(gpu_shader_2D_glass_card)
+VERTEX_IN(0, float2, pos)
+VERTEX_OUT(glass_win_co_iface)
+FRAGMENT_OUT(0, float4, fragColor)
+PUSH_CONSTANT(float4x4, ModelViewProjectionMatrix)
+/* Quad to draw in window pixels: (xmin, ymin, xmax, ymax). */
+PUSH_CONSTANT(float4, rect_geom)
+/* The card in window pixels: (xmin, ymin, xmax, ymax). */
+PUSH_CONSTANT(float4, card_rect)
+/* x: corner radius, y: shadow blur, z: shadow offset (downwards), w: shadow opacity. */
+PUSH_CONSTANT(float4, card_shape)
+/* Maps window pixels to wallpaper coordinates: `uv = win_co * xy + zw`. */
+PUSH_CONSTANT(float4, uv_transform)
+/* Look of the window background and of the card body. Tint: straight RGB, alpha is the amount.
+ * Look: x saturation, y brightness, z amount of white (frost), w grain. */
+PUSH_CONSTANT(float4, frame_tint)
+PUSH_CONSTANT(float4, frame_look)
+PUSH_CONSTANT(float4, card_tint)
+PUSH_CONSTANT(float4, card_look)
+/* x: width of the refracting edge, y: how far it bends (pixels), z: bevel width, w: bevel light. */
+PUSH_CONSTANT(float4, optics)
+/* x: rim width, y: rim light, z: rim light on the edges facing away from the light, w: mip-map
+ * level of the sharper wallpaper seen through the refracting edge. */
+PUSH_CONSTANT(float4, rim)
+PUSH_CONSTANT(int, card_mode)
+SAMPLER(0, sampler2D, frosted)
+SAMPLER(1, sampler2D, image)
+VERTEX_SOURCE("gpu_shader_2D_glass_card_vert.glsl")
+FRAGMENT_SOURCE("gpu_shader_2D_glass_card_frag.glsl")
+ADDITIONAL_INFO(gpu_srgb_to_framebuffer_space)
+DO_STATIC_COMPILATION()
+GPU_SHADER_CREATE_END()
+
+/**
+ * Wallpaper: the image the glass interface is drawn over, like a desktop wallpaper behind a
+ * frosted window. Used for the frosted window background, and to pre-blur the wallpaper.
  */
 GPU_SHADER_CREATE_INFO(gpu_shader_2D_glass_wallpaper)
 VERTEX_IN(0, float2, pos)
-VERTEX_OUT(glass_wallpaper_iface)
+VERTEX_OUT(glass_win_co_iface)
 FRAGMENT_OUT(0, float4, fragColor)
 PUSH_CONSTANT(float4x4, ModelViewProjectionMatrix)
-/* Fill mode: quad in window pixels (xmin, ymin, xmax, ymax).
- * Border mode: area rectangle as `rctf` (xmin, xmax, ymin, ymax). */
+/* Quad in window pixels (xmin, ymin, xmax, ymax). */
 PUSH_CONSTANT(float4, rect_geom)
 /* Maps window pixels to image coordinates: `uv = win_co * xy + zw`. */
 PUSH_CONSTANT(float4, uv_transform)
@@ -85,11 +119,6 @@ PUSH_CONSTANT(float4, params)
 /* xy: image coordinate step between the taps of a 1D Gaussian blur (zero for no blur),
  * z: write the raw color (for off-screen passes) instead of frame-buffer space. */
 PUSH_CONSTANT(float4, blur)
-/* Border mode parameters, same meaning as in #gpu_shader_2D_area_borders. */
-PUSH_CONSTANT(float, scale)
-PUSH_CONSTANT(float, width)
-PUSH_CONSTANT(int, cornerLen)
-PUSH_CONSTANT(bool, border_mode)
 SAMPLER(0, sampler2D, image)
 VERTEX_SOURCE("gpu_shader_2D_glass_wallpaper_vert.glsl")
 FRAGMENT_SOURCE("gpu_shader_2D_glass_wallpaper_frag.glsl")

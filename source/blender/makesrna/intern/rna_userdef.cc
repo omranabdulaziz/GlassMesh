@@ -1949,12 +1949,6 @@ static const EnumPropertyItem rna_enum_userdef_theme_background_types_items[] = 
      0,
      "Vignette",
      "Use a radial gradient as viewport background"},
-    {TH_BACKGROUND_GLASS,
-     "GLASS",
-     0,
-     "Glass",
-     "Show the glass wallpaper through the viewport background (a linear gradient when the glass "
-     "effect is disabled)"},
     {0, nullptr, 0, nullptr, nullptr},
 };
 

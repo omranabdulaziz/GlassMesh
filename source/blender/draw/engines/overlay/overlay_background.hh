@@ -10,8 +10,6 @@
 
 #include "DNA_world_types.h"
 
-#include "UI_glass.hh"
-
 #include "draw_cache.hh"
 
 #include "overlay_base.hh"
@@ -40,8 +38,7 @@ class Background : Overlay {
       color_override[3] = 1.0f;
     }
     else if (state.is_space_image()) {
-      /* GlassMesh: the image editor is a glass card around the image (see `wm_draw_glass.cc`). */
-      background_type = ui::glass_enabled() ? BG_GLASS_CHECKER : BG_SOLID_CHECKER;
+      background_type = BG_SOLID_CHECKER;
     }
     else if (state.is_space_node()) {
       background_type = BG_MASK;
@@ -71,13 +68,6 @@ class Background : Overlay {
           break;
         case TH_BACKGROUND_GRADIENT_RADIAL:
           background_type = BG_RADIAL;
-          break;
-        case TH_BACKGROUND_GLASS:
-          /* GlassMesh: transparent background in the interactive viewport, the window draws the
-           * glass wallpaper behind it. Images rendered from the viewport keep a background. */
-          background_type = (ui::glass_enabled() && !state.is_viewport_image_render) ?
-                                BG_GLASS :
-                                BG_GRADIENT;
           break;
         default:
         case TH_BACKGROUND_SINGLE_COLOR:

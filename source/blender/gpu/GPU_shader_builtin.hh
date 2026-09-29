@@ -61,6 +61,8 @@ enum GPUBuiltinShader {
   GPU_SHADER_2D_GLASS_BACKDROP,
   /** GlassMesh: procedural soft "wallpaper" gradient drawn behind translucent editors. */
   GPU_SHADER_2D_GLASS_WALLPAPER,
+  /** GlassMesh: an editor as a pane of glass: shadow, body, and edge (see the create info). */
+  GPU_SHADER_2D_GLASS_CARD,
   /** Multi usage widget shaders for drawing buttons and other UI elements. */
   GPU_SHADER_2D_WIDGET_BASE,
   GPU_SHADER_2D_WIDGET_BASE_INST,

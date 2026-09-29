@@ -45,13 +45,5 @@ void main()
   /* Grain, also hides banding of the smooth blurred gradients. */
   color += (glass_noise(win_co) - 0.5f) * params.w;
 
-  float alpha = 1.0f;
-  if (border_mode) {
-    /* Same coverage as `gpu_shader_2D_area_borders_frag.glsl`. */
-    float dist = (length(uv_border) - (0.98f - width)) * scale;
-    alpha = smoothstep(-0.09f, 1.09f, dist);
-  }
-
   fragColor = blender_srgb_to_framebuffer_space(float4(clamp(color, 0.0f, 1.0f), 1.0f));
-  fragColor.a = alpha;
 }

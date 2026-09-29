@@ -1338,7 +1338,8 @@ static void panel_draw_aligned_backdrop(const ARegion *region,
     float panel_backcolor[4];
     draw_roundbox_corner_set(is_open ? CNR_BOTTOM_RIGHT | CNR_BOTTOM_LEFT : CNR_ALL);
     if (!has_header) {
-      theme::get_color_4fv(TH_BACK, panel_backcolor);
+      /* GlassMesh: the region background color would be opaque here, over the glass. */
+      theme::get_color_4fv(glass_enabled() ? TH_PANEL_BACK : TH_BACK, panel_backcolor);
     }
     else {
       theme::get_color_4fv((is_subpanel ? TH_PANEL_SUB_BACK : TH_PANEL_BACK), panel_backcolor);

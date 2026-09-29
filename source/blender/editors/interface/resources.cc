@@ -1612,13 +1612,6 @@ void frame_buffer_clear(int colorid)
   GPU_clear_color(col[0], col[1], col[2], 1.0f);
 }
 
-void get_color_back_glass_4fv(int spacetype, float r_col[4])
-{
-  g_theme_back_keep_alpha = true;
-  get_color_type_4fv(TH_BACK, spacetype, r_col);
-  g_theme_back_keep_alpha = false;
-}
-
 int get_menu_shadow_width()
 {
   const bTheme *btheme = theme_get();

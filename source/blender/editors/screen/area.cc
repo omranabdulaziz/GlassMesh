@@ -54,6 +54,7 @@
 
 #include "IMB_metadata.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface.hh"
 #include "UI_interface_icons.hh"
 #include "UI_interface_layout.hh"
@@ -1986,7 +1987,13 @@ static void area_calc_totrct(const bScreen *screen, ScrArea *area, const rcti *w
   const short px = short(std::max(float(U.border_width) * UI_SCALE_FAC, UI_SCALE_FAC));
 
   /* Padding at window edges. Cannot be less than border width. */
-  const short px_edge = short(std::min(UI_SCALE_FAC * 2.0f, float(U.border_width) * UI_SCALE_FAC));
+  short px_edge = short(std::min(UI_SCALE_FAC * 2.0f, float(U.border_width) * UI_SCALE_FAC));
+  /* GlassMesh: the editors are panes of glass floating over the window background, with a margin
+   * around them (and below the top bar). */
+  const bool use_glass = ui::glass_enabled();
+  if (use_glass) {
+    px_edge = short(px * 2);
+  }
 
   area->totrct.xmin = area->v1->vec.x;
   area->totrct.xmax = area->v4->vec.x;
@@ -2006,7 +2013,7 @@ static void area_calc_totrct(const bScreen *screen, ScrArea *area, const rcti *w
     }
     else if (!screen->areabase.is_single() || screen->state == SCREENMAXIMIZED) {
       /* Small gap below Top Bar. */
-      area->totrct.ymax -= U.pixelsize;
+      area->totrct.ymax -= use_glass ? px : short(U.pixelsize);
     }
     else {
       area->totrct.ymax -= px_edge;

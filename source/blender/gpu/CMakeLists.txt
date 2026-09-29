@@ -524,6 +524,8 @@ set(GLSL_SRC
   shaders/gpu_shader_2D_area_borders_frag.glsl
   shaders/gpu_shader_2D_glass_vert.glsl
   shaders/gpu_shader_2D_glass_backdrop_frag.glsl
+  shaders/gpu_shader_2D_glass_card_vert.glsl
+  shaders/gpu_shader_2D_glass_card_frag.glsl
   shaders/gpu_shader_2D_glass_wallpaper_vert.glsl
   shaders/gpu_shader_2D_glass_wallpaper_frag.glsl
   shaders/gpu_shader_2D_widget_base.bsl.hh

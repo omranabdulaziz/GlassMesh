@@ -3207,7 +3207,17 @@ static void node_draw_basis(const bContext &C,
       ui::theme::get_color_4fv(TH_NODE_OUTLINE, color_outline);
     }
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
-    ui::draw_roundbox_4fv(&rect_node, false, BASIS_RAD + outline_width, color_outline);
+    /* GlassMesh: a specular rim along the inside of the outline, strongest along the top, like the
+     * edge of a pane of glass. The same as #draw_roundbox_4fv without glass. */
+    ui::draw_roundbox_4fv_glass(&rect_node,
+                                nullptr,
+                                nullptr,
+                                1.0f,
+                                color_outline,
+                                U.pixelsize,
+                                BASIS_RAD + outline_width,
+                                ui::glass_rim_strength() * 1.2f,
+                                0.0f);
   }
 
   /* Skip slow socket drawing if zoom is small. */
@@ -3353,7 +3363,16 @@ static void node_draw_collapsed(const bContext &C,
     }
 
     draw_roundbox_corner_set(ui::CNR_ALL);
-    ui::draw_roundbox_4fv(&rect, false, BASIS_RAD + outline_width, color_outline);
+    /* GlassMesh: glass rim, see #node_draw_basis. */
+    ui::draw_roundbox_4fv_glass(&rect,
+                                nullptr,
+                                nullptr,
+                                1.0f,
+                                color_outline,
+                                U.pixelsize,
+                                BASIS_RAD + outline_width,
+                                ui::glass_rim_strength() * 1.2f,
+                                0.0f);
   }
 
   if (node.is_muted()) {
@@ -4712,9 +4731,9 @@ static void draw_nodetree(const bContext &C, ARegion &region, bNodeTree &ntree)
 
 static void draw_background_color()
 {
-  /* GlassMesh: keeps the theme's translucency when the glass effect is used, same as
-   * `GPU_clear_color(back.r, back.g, back.b, 1.0)` otherwise. */
-  ui::theme::frame_buffer_clear(TH_BACK);
+  float color[3];
+  ui::theme::get_color_3fv(TH_BACK, color);
+  GPU_clear_color(color[0], color[1], color[2], 1.0);
 }
 
 void node_draw_space(const bContext &C, ARegion &region)

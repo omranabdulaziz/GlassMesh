@@ -503,12 +503,6 @@ void font_theme_color_set(int fontid, int colorid);
 void frame_buffer_clear(int colorid);
 
 /**
- * GlassMesh: the #TH_BACK color of \a spacetype including its alpha (the translucency of the
- * editor with the glass effect), which #get_color_type_4fv makes opaque for main regions.
- */
-void get_color_back_glass_4fv(int spacetype, float r_col[4]);
-
-/**
  * Internal (blender) usage only, for init and set active.
  */
 void theme_set(int spacetype, int regionid);

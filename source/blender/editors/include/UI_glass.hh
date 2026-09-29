@@ -16,10 +16,6 @@
 #include "DNA_userdef_types.h"
 #include "DNA_vec_types.h"
 
-namespace blender::gpu {
-class Batch;
-}
-
 namespace blender::ui {
 
 /** True when the glass interface style is enabled in the preferences. */
@@ -49,13 +45,13 @@ inline float glass_blur_radius()
 /** Strength of the bright rim along the edges of glass panels, menus and buttons. */
 inline float glass_rim_strength()
 {
-  return glass_enabled() ? 0.14f : 0.0f;
+  return glass_enabled() ? 0.3f : 0.0f;
 }
 
 /** Strength of the soft sheen over the upper part of glass buttons. */
 inline float glass_sheen_strength()
 {
-  return glass_enabled() ? 0.035f : 0.0f;
+  return glass_enabled() ? 0.05f : 0.0f;
 }
 
 /**
@@ -72,22 +68,29 @@ void draw_roundbox_4fv_glass(const rctf *rect,
                              float glass_rim,
                              float glass_sheen);
 
-/**
- * Bind the glass wallpaper shader (#GPU_SHADER_2D_GLASS_WALLPAPER) on \a batch, set up to draw the
- * frosted (blurred and tinted) wallpaper. In border mode the caller sets the same geometry
- * uniforms as for #GPU_SHADER_2D_AREA_BORDERS, otherwise `rect_geom` is the quad to fill (window
- * pixels). Returns false if the wallpaper isn't available (nothing is bound then).
- */
-bool glass_wallpaper_shader_bind(gpu::Batch *batch, const int window_size[2], bool border_mode);
-
 /** Fill the whole window with the frosted glass wallpaper. */
 void glass_wallpaper_draw(const int window_size[2]);
 
 /**
- * Draw the (slightly softened) wallpaper into \a rect (window pixels), behind a 3D viewport that
- * uses the #TH_BACKGROUND_GLASS theme background.
+ * The passes that draw an editor as a pane of glass ("card") over the frosted window background.
+ * Editors are the content of the cards: opaque editors (3D viewport, image editor...) cover the
+ * body, translucent ones let it show through.
  */
-void glass_viewport_backdrop_draw(const rcti *rect, const int window_size[2]);
+enum class GlassCardPass {
+  /** The soft drop shadow on the window background, before all bodies. */
+  Shadow,
+  /** The glass itself, before the editor is drawn. */
+  Body,
+  /** The rounded corners and the specular rim along the edge, after the editor is drawn. */
+  Edge,
+};
+
+/**
+ * Draw one pass of the glass card \a card (window pixels, an area's `totrct`). \a active is the
+ * active editor, which gets a brighter rim. Returns false (and draws nothing) if the wallpaper
+ * isn't available.
+ */
+bool glass_card_draw(GlassCardPass pass, const rcti *card, const int window_size[2], bool active);
 
 /**
  * The approximate color of the frosted window background along the top of the window (sRGB),
