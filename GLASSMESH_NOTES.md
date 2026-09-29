@@ -19,7 +19,7 @@ sharper and faster). The viewports show Blender's default scenes on a neutral ba
 | ![Animation](docs/glassmesh/animation.jpg) | ![Sculpting](docs/glassmesh/sculpting.jpg) |
 | Animation | Sculpting |
 | ![Frosted menu](docs/glassmesh/frosted_menu.jpg) | ![Preferences](docs/glassmesh/preferences.jpg) |
-| Frosted menu over the 3D viewport | Preferences, with switches and the Glass settings |
+| Frosted menu over the 3D viewport | Preferences over the main window, its glass shows it |
 | ![About](docs/glassmesh/about.jpg) | ![Glass off](docs/glassmesh/glass_off_blender_dark.jpg) |
 | About GlassMesh | Glass effect off + Blender Dark preset = classic look |
 
@@ -52,7 +52,8 @@ sharper and faster). The viewports show Blender's default scenes on a neutral ba
   a region's alpha), `GPU_SHADER_2D_GLASS_WALLPAPER` (draws and pre-blurs the wallpaper) and
   `GPU_SHADER_2D_GLASS_CARD` (an editor as a pane of glass: drop shadow, body with vibrancy,
   refraction and a lit bevel, and the edge with the specular rim and rounded corners).
-- `shaders/gpu_shader_2D_widget_base.bsl.hh` – rim highlight and sheen for all widgets.
+- `shaders/gpu_shader_2D_widget_base.bsl.hh` – rim highlight, sheen and continuous (superellipse)
+  corners for glass widgets.
 - `GPU_shader_builtin.hh`, `intern/gpu_shader_builtin.cc`, `CMakeLists.txt` – registration.
 
 **3D viewport** (`source/blender/draw/engines/overlay/`) – content stays opaque (the see-through
@@ -66,7 +67,8 @@ background of test builds was removed: `TH_BACKGROUND_GLASS_LEGACY` in `DNA_them
 **Window compositing** (`source/blender/windowmanager/`)
 
 - `intern/wm_draw_glass.cc` (new) – window capture and live blurred backdrop per region, the
-  editors' glass cards (shadows and bodies) before the editors are drawn.
+  editors' glass cards (shadows and bodies) before the editors are drawn, and what is behind each
+  window (a frosted copy of the parent window for child windows, the wallpaper on the desktop).
 - `intern/wm_draw.cc` – draws the frosted window background and the glass cards, blends
   translucent editors over them, and draws the live frosted backdrop under overlapping regions
   (headers, tool-bars, side-bars) and floating regions (menus, popups, tool-tips).
@@ -76,8 +78,8 @@ background of test builds was removed: `TH_BACKGROUND_GLASS_LEGACY` in `DNA_them
 **Interface drawing** (`source/blender/editors/`)
 
 - `include/UI_glass.hh` (new) – glass settings (radius, blur radius, rim/sheen strength) and helpers.
-- `interface/interface_widgets.cc` – rim & sheen defaults, pill tabs, tool tiles, on/off switches,
-  no double highlights on multi-pass widgets.
+- `interface/interface_widgets.cc` – rim & sheen defaults, continuous corners, pill tabs, square
+  tool tiles, on/off switches, accent hover in menus, no double highlights on multi-pass widgets.
 - `interface/interface_layout.cc`, `include/UI_interface_layout.hh`, `include/UI_interface_c.hh` –
   which checkboxes are drawn as switches (`BUT_GLASS_SWITCH`).
 - `interface/interface_draw.cc` – `draw_roundbox_4fv_glass()`, all 12 widget parameters uploaded.
@@ -87,7 +89,11 @@ background of test builds was removed: `TH_BACKGROUND_GLASS_LEGACY` in `DNA_them
 - `interface/resources.cc` – translucent (pre-multiplied) region background clears with glass.
 - `screen/screen_draw.cc`, `screen/screen_intern.hh` – the editors' glass edges (rounded corners
   and specular rim) instead of the flat gaps, larger corner radius.
-- `screen/area.cc` – margins around the glass cards at the window edges and below the top bar.
+- `screen/area.cc` – margins around the glass cards at the window edges and below the top bar,
+  also in windows with a single editor, overflow hints that fade into frost.
+- `include/ED_screen.hh` – `ED_screen_glass_cards_visible()`.
+- `interface/interface.cc` – the glass capsule behind the top bar's workspace tabs.
+- `space_file/file_draw.cc` – translucent rows and column header in the file browser.
 - `space_outliner/outliner_draw.cc` – pill shaped row highlights, no row stripes with glass.
 - `space_view3d/view3d_gizmo_navigate.cc` – glass circles behind the navigation buttons.
 - `space_node/node_intern.hh`, `space_node/node_draw.cc` – rounder node corners and a glass rim
@@ -240,13 +246,17 @@ These can only be changed by you, on github.com:
    and node canvas must never show the wallpaper.
 8. **macOS fonts:** on a fresh start the interface should use the system font (SF Pro). If it looks
    wrong, clear *Preferences > Interface > Text Rendering > Interface Font*.
-9. **Other editors:** Outliner, Properties, node editors, Dope Sheet/Graph Editor, Text Editor,
+9. **Windows behind windows:** open the preferences and move them over the 3D viewport and the
+   properties editor: their glass should take the colors of what is behind them, and follow
+   changes in the main window (orbit the view). On Wayland this is expected not to work (no
+   window positions).
+10. **Other editors:** Outliner, Properties, node editors, Dope Sheet/Graph Editor, Text Editor,
    Preferences window, file browser. Look for readability and drawing glitches.
-10. **HiDPI / scaling:** *Resolution Scale* 1.0 and 2.0, a Retina/4K display, several windows,
+11. **HiDPI / scaling:** *Resolution Scale* 1.0 and 2.0, a Retina/4K display, several windows,
     resizing windows.
-11. **Files:** open and save `.blend` files and make sure they still work in official Blender 5.2
+12. **Files:** open and save `.blend` files and make sure they still work in official Blender 5.2
     (and the other way round).
-12. **Desktop integration:** *Preferences > System > Operating System Settings > Register* (Linux
+13. **Desktop integration:** *Preferences > System > Operating System Settings > Register* (Linux
     and Windows), then check the `.blend` file association, the dock/taskbar icon and window
     grouping. **Windows:** taskbar pinning and `glassmesh-launcher.exe`.
 
@@ -256,3 +266,6 @@ These can only be changed by you, on github.com:
   the top bar's empty space, and the File/Edit/... menus in the native menu bar.
 - Regenerating the macOS `Assets.car` in Xcode from `glassmesh_logo.svg`.
 - Offering to import settings from a regular Blender installation on first start.
+- The real desktop behind the window (DECISIONS.md #76): a transparent window with the system's
+  own blur (`NSVisualEffectView` on macOS, DWM backdrops on Windows, ARGB + compositor on Linux),
+  the frame drawn with alpha instead of the wallpaper. Needs testing on each system.

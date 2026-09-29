@@ -302,3 +302,42 @@ glass.
     (72% instead of 81%) with a more vivid blur behind and a deeper shadow. Panels without a
     header (like the properties editor's context path) drew the editor color fully opaque, with
     glass they use the panel glass instead.
+
+## Fourth pass: polish
+
+The third pass was judged "pretty good". Still to fix: the timeline and the preferences looked
+more like Mica than frosted glass, a dark shadow at the top right of the outliner, tool buttons
+that looked squashed instead of being squircles, and windows should show what is behind them.
+
+69. **Continuous corners.** Glass widgets and editor cards have superellipse corners (exponent 4),
+    like Apple's continuous corners, instead of circular arcs. Pill shaped widgets (a radius of
+    half their height) keep their round ends.
+70. **Square tool tiles.** Icon-only tools are square tiles (they were 38 x 31 px), like app
+    icons. Tools with labels (a wide tool-bar) keep the width of the button.
+71. **Frosted, not tinted.** The glass of the cards replaces half of what is behind it with its
+    average color, which is how frosted glass scatters light. Big light and dark shapes of the
+    wallpaper no longer show through the timeline and other large editors almost unchanged,
+    which is what made them look like Mica.
+72. **The dark shadow** was Blender's hint that a header has more buttons than fit: a fade to the
+    header color at full opacity. With glass it fades into a light frost instead.
+73. **Every window is glass.** Windows with a single editor (preferences, file browser, render
+    view) had no card and only showed the blurred wallpaper, which is exactly Mica. Their editor is
+    now a glass card with the window glass around it, like in the main window.
+74. **Windows show what is behind them.** A window in front of its parent GlassMesh window shows a
+    frosted copy of it where it covers it, and the wallpaper around it, so the preferences over
+    the 3D viewport look gray and over the properties editor look blue. While a window has child
+    windows it keeps a small blurred copy of its last frame, and redraws them when it changes. The
+    wallpaper is placed on the desktop instead of on each window, so it lies still behind moving
+    windows. This needs window positions, which Wayland doesn't give, there the wallpaper covers
+    each window as before.
+75. **Tab bar.** The workspace tabs of the top bar sit in one glass capsule, like the tab bars of
+    all the mockups. Hovered menu and search items are accent blue instead of an opaque gray bar,
+    file browser rows are a light veil instead of opaque stripes, and the text editor and Python
+    console are 84% opaque so code stays easy to read.
+76. **Not done: the real desktop behind GlassMesh.** Showing the actual desktop and other
+    applications behind the GlassMesh window needs a transparent window from the operating
+    system: `NSVisualEffectView` and a non-opaque Metal layer on macOS, DWM backdrops on Windows,
+    an ARGB window and a compositor on Linux. Each needs the renderer to hand over alpha, and a
+    mistake gives an invisible or black window. None of it can be run in the environment
+    GlassMesh is developed in (no compositor, no Mac or Windows), so it was left for a pass that
+    can be tested on each system. The wallpaper stays the stand-in for the desktop.

@@ -14,8 +14,8 @@ GlassMesh is [Blender](https://www.blender.org) 5.2 LTS with a translucent, Appl
 "Liquid Glass" inspired interface: editors are panes of glass floating over a frosted wallpaper,
 with specular rims, light caught in their edges and soft drop shadows, a real background blur
 behind toolbars, headers, menus and popups, larger rounded corners, pill shaped tabs and iOS style
-switches. The 3D viewport, image editor and node canvas stay opaque and neutral, so colors are
-seen as they are. Everything else is Blender: the same tools, the same Python API, the same add-ons
+switches. Windows show the GlassMesh window behind them, frosted. The 3D viewport, image editor
+and node canvas stay opaque and neutral, so colors are seen as they are. Everything else is Blender: the same tools, the same Python API, the same add-ons
 and full `.blend` file compatibility.
 
 - The glass effect can be switched off in **Preferences > Interface > Display > Glass Effect**
