@@ -57,6 +57,10 @@ enum GPUBuiltinShader {
   GPU_SHADER_GPENCIL_STROKE,
   /** Draw rounded area borders with silky smooth anti-aliasing without any over-draw. */
   GPU_SHADER_2D_AREA_BORDERS,
+  /** GlassMesh: draw a blurred, tinted copy of a region texture (frosted glass backdrop). */
+  GPU_SHADER_2D_GLASS_BACKDROP,
+  /** GlassMesh: procedural soft "wallpaper" gradient drawn behind translucent editors. */
+  GPU_SHADER_2D_GLASS_WALLPAPER,
   /** Multi usage widget shaders for drawing buttons and other UI elements. */
   GPU_SHADER_2D_WIDGET_BASE,
   GPU_SHADER_2D_WIDGET_BASE_INST,

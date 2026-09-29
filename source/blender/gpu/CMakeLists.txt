@@ -482,6 +482,7 @@ set(GLSL_SRC
   shaders/infos/gpu_shader_2D_area_borders_infos.hh
   shaders/infos/gpu_shader_2D_checker_infos.hh
   shaders/infos/gpu_shader_2D_diag_stripes_infos.hh
+  shaders/infos/gpu_shader_2D_glass_infos.hh
   shaders/infos/gpu_shader_2D_image_desaturate_color_infos.hh
   shaders/infos/gpu_shader_2D_image_infos.hh
   shaders/infos/gpu_shader_2D_image_overlays_merge_infos.hh
@@ -521,6 +522,10 @@ set(GLSL_SRC
   shaders/gpu_shader_2D_vert.glsl
   shaders/gpu_shader_2D_area_borders_vert.glsl
   shaders/gpu_shader_2D_area_borders_frag.glsl
+  shaders/gpu_shader_2D_glass_vert.glsl
+  shaders/gpu_shader_2D_glass_backdrop_frag.glsl
+  shaders/gpu_shader_2D_glass_wallpaper_vert.glsl
+  shaders/gpu_shader_2D_glass_wallpaper_frag.glsl
   shaders/gpu_shader_2D_widget_base.bsl.hh
   shaders/gpu_shader_2D_widget_shadow_vert.glsl
   shaders/gpu_shader_2D_widget_shadow_frag.glsl

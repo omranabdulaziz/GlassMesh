@@ -96,6 +96,10 @@ static const char *builtin_shader_create_info_name(GPUBuiltinShader shader)
       return "gpu_shader_3D_point_uniform_color";
     case GPU_SHADER_2D_AREA_BORDERS:
       return "gpu_shader_2D_area_borders";
+    case GPU_SHADER_2D_GLASS_BACKDROP:
+      return "gpu_shader_2D_glass_backdrop";
+    case GPU_SHADER_2D_GLASS_WALLPAPER:
+      return "gpu_shader_2D_glass_wallpaper";
     case GPU_SHADER_2D_WIDGET_BASE:
       return "gpu_shader_2D_widget_base";
     case GPU_SHADER_2D_WIDGET_BASE_INST:

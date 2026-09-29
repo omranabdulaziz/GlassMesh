@@ -24,6 +24,8 @@ struct VertOut {
   [[flat]] float4 border_color;
   [[flat]] float4 emboss_color;
   [[flat]] float4 out_round_corners;
+  /* GlassMesh: x = rim highlight strength, y = sheen strength. */
+  [[flat]] float2 glass;
   [[no_perspective]] float but_co;
   [[no_perspective]] float2 uv_interp;
   [[no_perspective]] float4 inner_color;
@@ -57,9 +59,10 @@ struct [[host_shared]] Widget {
   float alpha_discard;
 
   float tria_type;
+  /* GlassMesh: rim highlight and sheen strength (0 disables). */
+  float glass_rim;
+  float glass_sheen;
   float _pad0;
-  float _pad1;
-  float _pad2;
 
   /* We encode alpha check and discard factor together. */
   bool do_alpha_check() const
@@ -102,6 +105,7 @@ struct [[host_shared]] Widget {
     v_out.uv_interp = pos - rect.xz;
     v_out.out_rect_size = rect.yw - rect.xz;
     v_out.out_round_corners = rads * round_corners;
+    v_out.glass = float2(glass_rim, glass_sheen);
 
     float2 uv = v_out.uv_interp / v_out.out_rect_size;
     float fac = clamp((shade_dir > 0.0f) ? uv.y : uv.x, 0.0f, 1.0f);
@@ -227,6 +231,7 @@ struct [[host_shared]] Widget {
     v_out.line_width = 0.0f;
     v_out.border_color = float4(0.0f);
     v_out.emboss_color = float4(0.0f);
+    v_out.glass = float2(0.0f);
 
     v_out.but_co = -2.0f;
 
@@ -306,6 +311,7 @@ struct Resources {
   v_out.border_color = vert_out.border_color;
   v_out.emboss_color = vert_out.emboss_color;
   v_out.out_round_corners = vert_out.out_round_corners;
+  v_out.glass = vert_out.glass;
   v_out.but_co = vert_out.but_co;
   v_out.uv_interp = vert_out.uv_interp;
   v_out.inner_color = vert_out.inner_color;
@@ -391,6 +397,19 @@ struct FragOut {
   frag_out.color *= masks.y;
   frag_out.color += masks.x * v_out.border_color;
   frag_out.color += masks.z * v_out.emboss_color;
+
+  /* GlassMesh: glass highlights. A thin bright rim just inside the outline (strongest along the
+   * top edge, like light catching the edge of a glass pane) and a soft sheen over the upper part
+   * of the body. Both are added as pre-multiplied white light. */
+  if (v_out.glass.x > 0.0f || v_out.glass.y > 0.0f) {
+    float height_fac = clamp(uv.y / max(v_out.out_rect_size.y, 1.0f), 0.0f, 1.0f);
+    float rim_width = max(1.0f, line_width);
+    float rim_mask = masks.y - smoothstep(-aa_radius, aa_radius, sdf - line_width - rim_width);
+    float rim_fac = mix(0.3f, 1.0f, smoothstep(0.25f, 1.0f, height_fac));
+    float sheen_fac = smoothstep(0.45f, 1.0f, height_fac) * masks.y;
+    float light = max(0.0f, rim_mask) * rim_fac * v_out.glass.x + sheen_fac * v_out.glass.y;
+    frag_out.color += float4(light);
+  }
 
   /* Un-pre-multiply because the blend equation is already doing the multiplication. */
   if (frag_out.color.a > 0.0f) {
