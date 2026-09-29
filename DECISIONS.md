@@ -21,6 +21,7 @@ changes only, don't break any functionality, don't ask questions.
    GlassMesh draws its own **procedural wallpaper** (a soft gradient with a few blurry color blobs)
    behind the editors. Translucent editors and the gaps between them show it, like the desktop in the
    mockups. Its colors come from the theme's **Editor Border** color, so users can re-tint it.
+   *(Second pass: replaced by a photographic wallpaper, see #44 to #47.)*
 5. **Real backdrop blur where it matters.** Regions that float over other content get a real
    frosted blur: headers, tool-bars and side-bars over the 3D viewport, menus, popups and tool-tips.
    The window frame-buffer is copied, pre-filtered at quarter resolution and blurred (24-tap
@@ -45,6 +46,7 @@ changes only, don't break any functionality, don't ask questions.
 11. **Headers over the viewport** use floating, fully rounded glass pills per button group, instead
     of Blender's attached tabs. The **tool-bar** floats on a glass pill (mockups 1, 2, 5), and
     **side-bar panels** are glass cards sized to their content (the "Pose Options" card in mockup 2).
+    *(Second pass: tools are separate tiles, see #50.)*
 12. **Tabs** (workspace tabs, properties tabs, preferences navigation) are pills, the active one in
     the accent blue (mockups 1, 2, 4). The preferences navigation uses tab buttons when glass is on,
     because the mockup shows transparent items there. It still uses the original radio buttons when
@@ -52,15 +54,16 @@ changes only, don't break any functionality, don't ask questions.
 13. **Palette:** a blue frosted glass look with accent `#3A8EE6`, near-white text (`#F2F6FB`) and
     darker translucent fields. Editor glass is slightly darker than the mockups, so white text keeps
     good contrast (about 5:1 or better) on any background. The requirement "text must stay fully
-    readable" won over matching the lightest mockup tones exactly.
+    readable" won over matching the lightest mockup tones exactly. *(Second pass: lighter, see
+    #48.)*
 14. **Checkboxes stay checkboxes.** The mockups show both checkboxes ("Region Overlap", "Cursor") and
     iOS-style switches ("Splash Screen", "Auto IK"), for what are the same kind of Blender setting.
     There's no rule in Blender's layouts to decide which one gets a switch, so switches were not
-    added. The checkboxes are rounded and blue like in the mockups. See *Possible follow-ups* in
-    `GLASSMESH_NOTES.md`.
+    added. The checkboxes are rounded and blue like in the mockups. *(Second pass: switches with a
+    layout based rule, see #49.)*
 15. **Editor gaps:** factory preferences use a border width of 4 (Blender: 2) so the wallpaper shows
-    between editors, and corners are 12 px instead of 6. Both are ordinary preferences
-    (Interface > Editors > Border Width).
+    between editors, and corners are 12 px instead of 6 (16 px in the second pass). The border
+    width is an ordinary preference (Interface > Editors > Border Width).
 
 ## The "Glass" preferences
 
@@ -68,7 +71,8 @@ changes only, don't break any functionality, don't ask questions.
     Blur* (blur can be turned off separately for slow GPUs).
 17. **Storage:** a new `UserDef.glass_flag` in existing struct padding. The struct size and
     `.blend`/`userpref.blend` layout are unchanged. The flags are negative (`USER_GLASS_DISABLE`,
-    `USER_GLASS_NO_BLUR`), so zero-initialized/old preferences get the glass effect.
+    `USER_GLASS_NO_BLUR`), so zero-initialized/old preferences get the glass effect. *(Second
+    pass: the wallpaper setting adds a path, see #46.)*
 18. **What "off" does:** no wallpaper, no blur, no rims/sheen, opaque regions, classic tabs and
     corner radius. The theme's colors are not changed by the toggle. Users who want the full classic
     look pick the **Blender Dark** theme preset.
@@ -172,3 +176,62 @@ changes only, don't break any functionality, don't ask questions.
     libraries from the official Blender 5.2.2 Linux release. Stand-ins for LFS files came from that
     release too (marked `skip-worktree`, never committed). The UI was checked in screenshots under
     Xvfb with Mesa's software OpenGL (llvmpipe). None of this is committed.
+
+## Second pass: following the mockups more closely
+
+The first version was judged "still very Blenderish". The feedback was that faithfulness to
+Blender's own interface doesn't matter, only the mockups and Apple's interface do. The second pass
+therefore follows the mockups wherever they differ from Blender's look. Functionality is still
+unchanged. Where these decisions replace earlier ones, the earlier number is given.
+
+44. **A photographic wallpaper** (replaces the procedural gradient of #4). Much of the mockups' look
+    comes from a landscape photo seen through frosted glass. GlassMesh ships an original one: an
+    alpine lake, fully procedural (terrain, snow, water, rocks, sky and clouds) and rendered with
+    Cycles by `tools/glassmesh/make_wallpaper.py`. No photos and no Apple wallpapers were used,
+    Apple's wallpapers are copyrighted. It is embedded in the executable, like the splash.
+45. **A frosted window.** The window background and the gaps between editors show a heavily blurred
+    copy of the wallpaper, tinted with the theme's *Editor Border* color (its alpha is the
+    amount). The blurred copy is made once when the wallpaper is loaded, not every frame. Editors
+    are translucent glass cards on top of it. The live blur of #5 is still drawn under regions
+    that overlap content, and under menus and popups.
+46. **Your own wallpaper.** *Preferences > Interface > Display > Wallpaper* takes any image, for
+    example the desktop wallpaper, which gets close to the mockups' see-through-to-the-desktop look
+    (#4). It is stored in a new `UserDef.glass_wallpaper` path, so unlike #17 the preferences
+    struct grows by 1 KB. `.blend` files are not affected.
+47. **A glass 3D viewport.** A new theme background type, *Glass*, is the default. In solid and
+    wireframe shading the viewport background is transparent, and the wallpaper shows through,
+    slightly softened and tinted with the viewport's *Gradient Low* theme color. This gives the
+    mountain scenes behind the models in the mockups. Material preview and rendered shading still
+    show the world, and images rendered from the viewport (*View > Viewport Render Image*) keep a
+    gradient background. It can be changed per viewport (*Shading > Background: World/Viewport*) or
+    in the theme. The *Blender Dark* preset sets Blender's single color again.
+48. **Lighter glass** (revisits #13). Editor cards are a translucent blue (65% opacity) over the
+    milky frosted wallpaper, and headers have the same color as their card instead of being a
+    separate strip. The top bar and status bar are almost clear. Fields and buttons are light
+    glass, sliders are blue. It is lighter than version 1, like the mockups, and white text keeps
+    a contrast of about 4.5:1 or better.
+49. **Switches** (replaces #14). On/off settings in a property split layout, a row with the setting
+    name and nothing else, are drawn as iOS style switches at the right end of the row. Checkboxes
+    grouped under a heading, like *Tooltips: User Tooltips, Python Tooltips*, stay checkboxes. This
+    rule reproduces the Preferences mockup: *Splash Screen* and *Developer Extras* are switches,
+    *Show Tooltips* and *Python Tooltips* are checkboxes. Only *Region Overlap* differs, it is a
+    switch here and a checkbox in the mockup, which isn't consistent itself. It is only drawing,
+    the switch is still Blender's checkbox button.
+50. **Tool tiles** (replaces the tool-bar pill of #11). Each tool of a tool-bar is its own rounded
+    glass tile, the active one blue, like the tool-bars in the mockups.
+51. **Panels are cards.** A panel's header is no longer a separate strip: the header and the
+    content share one rounded glass card, closed panels included.
+52. **Rounder and more colorful.** Editor corners are 16 px (was 12, #15), the outliner highlights
+    rows with blue pills, widgets are a bit rounder, and icons have their full colors (Blender
+    shows them at half saturation).
+53. **Title bar (macOS and Windows).** Blender colors the system title bar with the top bar's
+    theme color. With glass it gets the color of the frosted wallpaper at the top of the window
+    instead, so it matches the almost clear top bar.
+54. **Apple's system font on macOS.** New preferences on macOS use SF Pro and SF Mono, the
+    operating system's own fonts (not shipped with GlassMesh), for the interface, like native Apple
+    apps and the mockups. Other platforms keep Blender's Inter font. If the fonts can't be loaded,
+    Blender's built-in fonts are used.
+55. **Not done: traffic lights inside the window, and File/Edit/Render/Window/Help in the macOS
+    menu bar.** The mockups show both. The first needs a window without a title bar, which also
+    removes the area used to drag the window around. The second needs a bridge between Blender's
+    Python menus and native menus. Neither could be done safely without a Mac to test on.

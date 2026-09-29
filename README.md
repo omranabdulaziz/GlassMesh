@@ -11,13 +11,16 @@ GlassMesh
 Blender Foundation.**
 
 GlassMesh is [Blender](https://www.blender.org) 5.2 LTS with a translucent, Apple
-"Liquid Glass" inspired interface: frosted glass editors, headers, panels and menus, a soft
-background blur behind toolbars, headers and popups, larger rounded corners, bright rim
-highlights and soft drop shadows. Everything else is Blender: the same tools, the same Python
-API, the same add-ons and full `.blend` file compatibility.
+"Liquid Glass" inspired interface: editors are frosted glass cards floating over a wallpaper,
+with a real background blur behind toolbars, headers, menus and popups, larger rounded corners,
+bright rim highlights, soft drop shadows, pill shaped tabs and iOS style switches. Everything else
+is Blender: the same tools, the same Python API, the same add-ons and full `.blend` file
+compatibility.
 
-- The glass effect can be switched off in **Preferences > Interface > Display > Glass**
+- The glass effect can be switched off in **Preferences > Interface > Display > Glass Effect**
   (the background blur can be switched off separately, for slower graphics cards).
+- The wallpaper behind the glass is an original mountain lake, or any image you like, for
+  example your desktop wallpaper (**Preferences > Interface > Display > Wallpaper**).
 - GlassMesh keeps its settings in its own `GlassMesh` configuration folder, it never reads or
   overwrites the preferences of a regular Blender installation.
 - The classic look is one click away: pick the **Blender Dark** theme preset and turn the glass

@@ -27,52 +27,72 @@ sharper and faster). The viewport shows Blender's default scene.
 
 ### 1. Glass interface
 
-**Preferences** – *Interface > Display > Glass*: **Glass Effect** and **Background Blur**.
+**Preferences** – *Interface > Display*: **Glass Effect**, **Background Blur** and **Wallpaper**.
 
 - `source/blender/makesdna/DNA_userdef_types.h` – `UserDef.glass_flag` (`USER_GLASS_DISABLE`,
-  `USER_GLASS_NO_BLUR`), stored in existing padding.
-- `source/blender/makesrna/intern/rna_userdef.cc` – `use_glass_effect`, `use_glass_blur`.
-- `scripts/startup/bl_ui/space_userpref.py` – the two settings, and the glass style preferences
+  `USER_GLASS_NO_BLUR`, stored in existing padding) and `UserDef.glass_wallpaper` (image path).
+- `source/blender/makesrna/intern/rna_userdef.cc` – `use_glass_effect`, `use_glass_blur`,
+  `glass_wallpaper`, and the new *Glass* viewport background type.
+- `scripts/startup/bl_ui/space_userpref.py` – the settings, and the glass style preferences
   navigation.
+
+**Wallpaper**
+
+- `release/datafiles/glassmesh/wallpaper.jpg` – the built-in wallpaper, an original procedural alpine
+  lake rendered by `tools/glassmesh/make_wallpaper.py` (Cycles). Embedded in the executable
+  (`editors/datafiles/CMakeLists.txt`, `ED_datafiles.h`).
+- `source/blender/editors/interface/interface_glass.cc` (new) – loads the built-in or custom
+  wallpaper, makes its blurred ("frosted") copy, draws the frosted window background, the editor
+  gaps and the 3D viewport backdrop, and computes the title bar color.
 
 **Shaders** (`source/blender/gpu/`)
 
 - `shaders/infos/gpu_shader_2D_glass_infos.hh`, `shaders/gpu_shader_2D_glass_*.glsl` – two new
-  built-in shaders: `GPU_SHADER_2D_GLASS_BACKDROP` (frosted blur + tint + grain, masked by a region's
-  alpha) and `GPU_SHADER_2D_GLASS_WALLPAPER` (procedural wallpaper, also usable with the editor-gap
-  geometry).
+  built-in shaders: `GPU_SHADER_2D_GLASS_BACKDROP` (live frosted blur + tint + grain, masked by a
+  region's alpha) and `GPU_SHADER_2D_GLASS_WALLPAPER` (draws and pre-blurs the wallpaper, also with
+  the editor-gap geometry).
 - `shaders/gpu_shader_2D_widget_base.bsl.hh` – rim highlight and sheen for all widgets.
 - `GPU_shader_builtin.hh`, `intern/gpu_shader_builtin.cc`, `CMakeLists.txt` – registration.
 
+**Glass 3D viewport** (`source/blender/draw/engines/overlay/`)
+
+- `overlay_background.hh`, `overlay_shader_shared.hh`, `shaders/overlay_background_frag.glsl` – the
+  *Glass* background type (`TH_BACKGROUND_GLASS` in `makesdna/DNA_theme_types.h`) leaves the
+  background transparent.
+
 **Window compositing** (`source/blender/windowmanager/`)
 
-- `intern/wm_draw_glass.cc` (new) – wallpaper, window capture, blurred backdrop per region.
-- `intern/wm_draw.cc` – draws the wallpaper, blends translucent editors, and draws the frosted
-  backdrop under overlapping regions (headers, tool-bars, side-bars) and floating regions (menus,
-  popups, tool-tips).
+- `intern/wm_draw_glass.cc` (new) – window capture and live blurred backdrop per region, glass
+  viewport backdrop.
+- `intern/wm_draw.cc` – draws the frosted window background, blends translucent editors and glass
+  viewports over it, and draws the live frosted backdrop under overlapping regions (headers,
+  tool-bars, side-bars) and floating regions (menus, popups, tool-tips).
+- `intern/wm_window.cc` – title bar color (macOS, Windows).
 - `wm_draw.hh`, `intern/wm_init_exit.cc` (GPU resources freed at exit), `CMakeLists.txt`.
 
 **Interface drawing** (`source/blender/editors/`)
 
 - `include/UI_glass.hh` (new) – glass settings (radius, blur radius, rim/sheen strength) and helpers.
-- `interface/interface_glass.cc` (new) – wallpaper palette (from the theme's *Editor Border* color).
-- `interface/interface_widgets.cc` – rim & sheen defaults, pill tabs, no double highlights on
-  multi-pass widgets.
+- `interface/interface_widgets.cc` – rim & sheen defaults, pill tabs, tool tiles, on/off switches,
+  no double highlights on multi-pass widgets.
+- `interface/interface_layout.cc`, `include/UI_interface_layout.hh`, `include/UI_interface_c.hh` –
+  which checkboxes are drawn as switches (`BUT_GLASS_SWITCH`).
 - `interface/interface_draw.cc` – `draw_roundbox_4fv_glass()`, all 12 widget parameters uploaded.
-- `interface/interface_panel.cc` – panel rims, glass cards for panels over the viewport, the
-  tool-bar glass pill.
+- `interface/interface_panel.cc` – panels as glass cards, panel rims.
 - `interface/interface_button_sections.cc` – header button groups as floating glass pills.
+- `interface/interface_icons.cc` – tool icons aren't inverted for translucent tool buttons.
 - `interface/resources.cc` – translucent (pre-multiplied) region background clears with glass.
-- `screen/screen_draw.cc`, `screen/screen_intern.hh` – editor gaps show the wallpaper, rim on
-  editor outlines, larger corner radius.
+- `screen/screen_draw.cc`, `screen/screen_intern.hh` – editor gaps show the frosted wallpaper, rim
+  on editor outlines, larger corner radius.
+- `space_outliner/outliner_draw.cc` – pill shaped row highlights.
 
-**Theme**
+**Theme and defaults**
 
 - `release/datafiles/userdef/userdef_default_theme.c` – the GlassMesh default theme, generated by
   `tools/glassmesh/apply_glassmesh_theme.py` (edit the palette there and re-run it).
 - `scripts/presets/interface_theme/Blender_Dark.xml` – now contains Blender 5.2's default colors
   (the classic look), `GlassMesh.xml` – the built-in default.
-- `source/blender/blenkernel/intern/blendfile.cc` – factory border width 4.
+- `source/blender/blenkernel/intern/blendfile.cc` – factory border width 4, macOS system fonts.
 
 ### 2. Branding (user-facing only)
 
@@ -163,9 +183,10 @@ macOS 50 min, Windows 128 min). These are the builds to test first. Checked here
   window frame-buffer (`GPU_framebuffer_blit`), and on those backends that path is the first thing
   to check.
 - **See-through to the desktop.** The mockups show the OS desktop behind the Blender window. Blender
-  can't draw into a transparent OS window, so GlassMesh draws its own soft wallpaper instead.
-- **iOS style toggle switches** (seen in some mockups) were not added. Checkboxes are restyled
-  instead, see DECISIONS.md #14.
+  can't draw into a transparent OS window, so GlassMesh draws its own wallpaper behind the glass.
+  Choosing your desktop wallpaper in *Preferences > Interface > Display > Wallpaper* comes close.
+- **Traffic lights inside the window, and the File/Edit/... menus in the macOS menu bar**, as in the
+  mockups. See DECISIONS.md #55.
 - **macOS 26 Liquid Glass app icon (`Assets.car`).** Compiling an asset catalog needs Xcode. The
   `.icns` icon is used on all macOS versions.
 - **Packaging templates** for Snap, Flatpak and MSIX (`release/freedesktop/snap`,
@@ -204,19 +225,24 @@ These can only be changed by you, on github.com:
    repeat step 4. If the blur breaks on one backend, turn off *Background Blur* and report it.
 6. **Toggles:** switch *Glass Effect* and *Background Blur* off and on, everything should update
    right away. Then pick the *Blender Dark* theme preset with glass off, it should look like Blender.
-7. **Other editors:** Outliner, Properties, node editors, Dope Sheet/Graph Editor, Text Editor,
+7. **Wallpaper:** choose your own image in *Preferences > Interface > Display > Wallpaper* (for
+   example your desktop wallpaper), then clear the field again for the built-in one. Check the
+   3D viewport background, the gaps between editors and the title bar color.
+8. **macOS fonts:** on a fresh start the interface should use the system font (SF Pro). If it looks
+   wrong, clear *Preferences > Interface > Text Rendering > Interface Font*.
+9. **Other editors:** Outliner, Properties, node editors, Dope Sheet/Graph Editor, Text Editor,
    Preferences window, file browser. Look for readability and drawing glitches.
-8. **HiDPI / scaling:** *Resolution Scale* 1.0 and 2.0, a Retina/4K display, several windows,
-   resizing windows.
-9. **Files:** open and save `.blend` files and make sure they still work in official Blender 5.2
-   (and the other way round).
-10. **Desktop integration:** *Preferences > System > Operating System Settings > Register* (Linux
+10. **HiDPI / scaling:** *Resolution Scale* 1.0 and 2.0, a Retina/4K display, several windows,
+    resizing windows.
+11. **Files:** open and save `.blend` files and make sure they still work in official Blender 5.2
+    (and the other way round).
+12. **Desktop integration:** *Preferences > System > Operating System Settings > Register* (Linux
     and Windows), then check the `.blend` file association, the dock/taskbar icon and window
     grouping. **Windows:** taskbar pinning and `glassmesh-launcher.exe`.
 
 ## Possible follow-ups
 
-- iOS style switches for some checkboxes, if a clear rule for which ones can be agreed on.
-- A user setting for the wallpaper (colors, or an image).
+- macOS: a full-size window with the traffic lights in the top bar, with dragging the window by
+  the top bar's empty space, and the File/Edit/... menus in the native menu bar.
 - Regenerating the macOS `Assets.car` in Xcode from `glassmesh_logo.svg`.
 - Offering to import settings from a regular Blender installation on first start.
