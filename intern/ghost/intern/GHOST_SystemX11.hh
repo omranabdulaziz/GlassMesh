@@ -27,8 +27,8 @@
 #endif
 
 #if defined(WITH_X11_XINPUT) && defined(X_HAVE_UTF8_STRING)
-#  define GHOST_X11_RES_NAME "Blender"  /* res_name */
-#  define GHOST_X11_RES_CLASS "Blender" /* res_class */
+#  define GHOST_X11_RES_NAME "GlassMesh"  /* res_name */
+#  define GHOST_X11_RES_CLASS "GlassMesh" /* res_class */
 #endif
 
 /* generic error handlers */

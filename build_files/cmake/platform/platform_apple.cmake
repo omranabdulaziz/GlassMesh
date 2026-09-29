@@ -506,4 +506,5 @@ if(PLATFORM_BUNDLED_LIBRARIES)
 endif()
 
 # Same as `CFBundleIdentifier` in Info.plist.
-set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "org.blenderfoundation.blender")
+# GlassMesh: own bundle identifier, so it's a separate application for macOS.
+set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "io.github.omranabdulaziz.glassmesh")
