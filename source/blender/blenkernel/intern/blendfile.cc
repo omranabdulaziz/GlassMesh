@@ -1553,6 +1553,17 @@ UserDef *BKE_blendfile_userdef_from_defaults()
   /* GlassMesh: wider gaps between editors, so the glass "wallpaper" shows between them. */
   userdef->border_width = 4;
 
+#ifdef __APPLE__
+  /* GlassMesh: use the system fonts of macOS (San Francisco), like native Apple apps. The fonts
+   * are part of the operating system, if they can't be loaded the built-in fonts are used. */
+  if (BLI_exists("/System/Library/Fonts/SFNS.ttf")) {
+    STRNCPY(userdef->font_path_ui, "/System/Library/Fonts/SFNS.ttf");
+  }
+  if (BLI_exists("/System/Library/Fonts/SFNSMono.ttf")) {
+    STRNCPY(userdef->font_path_ui_mono, "/System/Library/Fonts/SFNSMono.ttf");
+  }
+#endif
+
 #ifdef WITH_PYTHON_SECURITY
   /* use alternative setting for security nuts
    * otherwise we'd need to patch the binary blob - startup.blend.c */

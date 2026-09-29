@@ -85,6 +85,7 @@
 #include "IMB_imbuf.hh"
 #include "IMB_imbuf_types.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface.hh"
 #include "UI_interface_icons.hh"
 #include "UI_interface_layout.hh"
@@ -854,6 +855,14 @@ static void wm_window_decoration_style_set_from_theme(const wmWindow *win, const
 
   float titlebar_bg_color[3];
   ui::theme::get_color_3fv(TH_BACK, titlebar_bg_color);
+
+  /* GlassMesh: the top bar is (almost) clear glass over the frosted wallpaper, match that. */
+  float glass_color[3];
+  if (WM_window_is_main_top_level(win) && ui::glass_window_top_color(glass_color)) {
+    float topbar_color[4];
+    ui::theme::get_color_4fv(TH_BACK, topbar_color);
+    interp_v3_v3v3(titlebar_bg_color, glass_color, topbar_color, topbar_color[3]);
+  }
   copy_v3_v3(decoration_settings.colored_titlebar_bg_color, titlebar_bg_color);
 
   GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
