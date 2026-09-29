@@ -44,7 +44,7 @@ GLASS_TOOLTIP = "1d3a60e0"
 # `editor_border`). Their alpha is how much of it shows through.
 EDITOR_LIGHT = "1c3d66a6"  # Properties, outliner, file browser, preferences...
 EDITOR_DARK = "142c4cc4"   # Timelines, graph, text...
-EDITOR_OPAQUE = "15243bff" # Editors drawn through a color managed viewport can't be translucent.
+EDITOR_OPAQUE = "15243bff" # Editors that are always drawn opaque (the sequencer).
 HEADER = EDITOR_LIGHT      # Headers are part of their editor's card.
 HEADER_DARK = EDITOR_DARK
 HEADER_OVERLAP = "2a4a7899"
@@ -72,7 +72,7 @@ THEME = {
         "wcol_regular": widget(GLASS_OUTLINE, ACCENT, GLASS_BUTTON, ACCENT, "ffffffcc", TEXT, WHITE, 0.4),
         "wcol_tool": widget(GLASS_OUTLINE, ACCENT, GLASS_BUTTON, ACCENT, WHITE, TEXT, WHITE, 0.4),
         # Every tool is its own small glass tile (see `widget_toolbar_item_glass`).
-        "wcol_toolbar_item": widget("ffffff38", "ffffff66", "ffffff24", ACCENT, "ffffffe6", TEXT, WHITE, 0.4),
+        "wcol_toolbar_item": widget("ffffff4d", "ffffff66", "9ebde66b", ACCENT, "ffffffe6", TEXT, WHITE, 0.4),
         "wcol_text": widget(GLASS_OUTLINE, ACCENT, GLASS_FIELD, "0a1a30bf", "ffffff40", TEXT, WHITE, 0.5),
         "wcol_radio": widget(GLASS_OUTLINE, "ffffff4d", GLASS_FIELD, ACCENT, WHITE, TEXT, WHITE, 0.4),
         "wcol_option": widget("ffffff4d", ACCENT, GLASS_FIELD, ACCENT, WHITE, TEXT, WHITE, 0.35),
@@ -136,8 +136,8 @@ THEME = {
         "header": HEADER_OVERLAP,
         "text": TEXT,
         "title": WHITE,
-        "grid": "ffffff2e",
-        "grid_major": "ffffff47",
+        "grid": "ffffff24",
+        "grid_major": "ffffff3d",
     },
     "space_file": {"back": EDITOR_LIGHT, "header": HEADER, "hilite": ACCENT, "row_alternate": "ffffff05"},
     "space_graph": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0c1524ff"},
@@ -145,21 +145,25 @@ THEME = {
     "space_action": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0c1524ff", "anim_active": "2f6fb866"},
     "space_nla": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0e1a2cff"},
     "space_sequencer": {"back": EDITOR_OPAQUE, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0e1a2cff"},
-    "space_image": {"back": "1a2536ff", "header": HEADER_DARK},
+    "space_image": {"back": EDITOR_DARK, "header": HEADER_DARK},
     "space_text": {"back": EDITOR_DARK, "header": HEADER_DARK, "shade2": "2a4466e6", "line_numbers": "7f95b0ff", "grid": "0e1726ff"},
     "space_outliner": {
         "back": EDITOR_LIGHT,
         "header": HEADER,
+        # Rows are highlighted with pills: the active one in the accent color, other selected ones
+        # in a quieter blue, with white text instead of the classic orange.
         "active": ACCENT,
-        "selected_highlight": "3a8ee6d9",
+        "selected_highlight": "2e67a6ff",
+        "selected_object": "dbe9ffff",
+        "active_object": WHITE,
         "row_alternate": "ffffff04",
         "text": TEXT,
     },
     "space_node": {
-        "back": EDITOR_OPAQUE,
+        "back": EDITOR_DARK,
         "header": HEADER_DARK,
-        "grid": "26385200",
-        "syntaxl": "22385af0",   # Node backdrop.
+        "grid": "ffffff17",
+        "syntaxl": "284874eb",   # Node backdrop.
         "node_outline": "ffffff33",
         "syntaxn": "c83a55ff",   # Input nodes.
         "syntaxv": "2f86c8ff",   # Converter nodes.

@@ -3956,6 +3956,11 @@ static void outliner_draw_tree(ui::Block *block,
 
 static void outliner_back(ARegion *region)
 {
+  /* GlassMesh: the opaque stripes would cover the glass, rows only get highlight pills. */
+  if (ui::glass_enabled()) {
+    return;
+  }
+
   int ystart;
 
   ystart = int(region->v2d.tot.ymax);
