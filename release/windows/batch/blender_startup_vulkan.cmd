@@ -1,4 +1,4 @@
 @echo off
-echo Starting Blender with the Vulkan backend
+echo Starting GlassMesh with the Vulkan backend
 
-"%~dp0\blender" --gpu-backend vulkan
+"%~dp0\glassmesh" --gpu-backend vulkan
