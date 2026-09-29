@@ -28,9 +28,19 @@ class TOPBAR_HT_upper_bar(Header):
         window = context.window
         screen = context.screen
 
-        TOPBAR_MT_editor_menus.draw_collapsible(context, layout)
-
-        layout.separator(type='LINE')
+        if not context.preferences.view.use_glass_effect:
+            # GlassMesh: the classic look always shows the menus (they are collapsed by default,
+            # for the glass style).
+            layout.row(align=True).menu_contents("TOPBAR_MT_editor_menus")
+            layout.separator(type='LINE')
+        elif not context.area.show_menus:
+            # GlassMesh: like the application menu of a macOS app, one menu holds File, Edit...
+            # ("Show Menus" in the header's context menu shows them all again).
+            layout.menu("TOPBAR_MT_editor_menus", text="GlassMesh", icon='BLENDER')
+            layout.separator(factor=0.5)
+        else:
+            TOPBAR_MT_editor_menus.draw_collapsible(context, layout)
+            layout.separator(type='LINE')
 
         if not screen.show_fullscreen:
             layout.template_ID_tabs(window, "workspace", new="workspace.add", menu="TOPBAR_MT_workspace_menu")
@@ -111,7 +121,11 @@ class TOPBAR_MT_editor_menus(Menu):
         layout = self.layout
 
         # Allow calling this menu directly (this might not be a header area).
-        if getattr(context.area, "show_menus", False):
+        # GlassMesh: without the glass style, the top-bar always shows its menus.
+        show_menus = getattr(context.area, "show_menus", False) or (
+            getattr(context.area, "type", "") == 'TOPBAR' and not context.preferences.view.use_glass_effect
+        )
+        if show_menus:
             layout.menu("TOPBAR_MT_blender", text="", icon='BLENDER')
         else:
             layout.menu("TOPBAR_MT_blender", text="GlassMesh")

@@ -692,6 +692,14 @@ void BLO_update_defaults_startup_blend(Main *bmain, const char *app_template)
     blo_update_defaults_windowmanager(&wm);
 
     for (wmWindow &win : wm.windows) {
+      /* GlassMesh: the top-bar menus are collapsed into one application menu (only with the
+       * glass style, "Show Menus" in the header context menu shows them again). */
+      for (ScrArea &area : win.global_areas.areabase) {
+        if (area.spacetype == SPACE_TOPBAR) {
+          area.flag |= HEADER_NO_PULLDOWN;
+        }
+      }
+
       for (WorkSpace &workspace : bmain->workspaces) {
         WorkSpaceLayout *layout = BKE_workspace_active_layout_for_workspace_get(win.workspace_hook,
                                                                                 &workspace);

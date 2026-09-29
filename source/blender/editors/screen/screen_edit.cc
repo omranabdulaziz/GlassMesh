@@ -1259,6 +1259,12 @@ static void screen_global_area_refresh(wmWindow *win,
     area->global->size_max = height_max;
     area->global->size_min = height_min;
     area->global->align = align;
+
+    if (space_type == SPACE_TOPBAR) {
+      /* GlassMesh: the top-bar menus are collapsed into one application menu by default (only
+       * with the glass style, "Show Menus" in the header context menu shows them again). */
+      area->flag |= HEADER_NO_PULLDOWN;
+    }
   }
 
   if (area->global->cur_fixed_height != height_cur) {
