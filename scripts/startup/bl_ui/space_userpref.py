@@ -84,6 +84,9 @@ class USERPREF_PT_navigation_bar(Panel):
                 data_highlight=view,
                 property_highlight="tab_search_results",
                 expand_as='ROW')
+        elif prefs.view.use_glass_effect:
+            # GlassMesh: glass style navigation, transparent items with a highlighted active item.
+            col.prop_tabs_enum(prefs, "active_section")
         else:
             col.prop(prefs, "active_section", expand=True)
 

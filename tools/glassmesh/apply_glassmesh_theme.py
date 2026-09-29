@@ -90,8 +90,8 @@ THEME = {
         "menu_shadow_width": 14,
         # Also the base color of the glass "wallpaper" (see `interface_glass.cc`).
         "editor_border": "2e5c8cff",
-        "editor_outline": "ffffff1c",
-        "editor_outline_active": "ffffff40",
+        "editor_outline": "ffffff2e",
+        "editor_outline_active": "ffffff59",
         "icon_saturation": 0.65,
         "widget_text_cursor": "7fbfffff",
         "panel_roundness": 1.0,

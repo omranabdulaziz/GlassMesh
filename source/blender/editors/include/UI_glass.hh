@@ -37,7 +37,7 @@ inline bool glass_blur_enabled()
 /** Corner radius of editors (areas), in pixels. */
 inline float glass_editor_radius()
 {
-  return (glass_enabled() ? 10.0f : 6.0f) * UI_SCALE_FAC;
+  return (glass_enabled() ? 12.0f : 6.0f) * UI_SCALE_FAC;
 }
 
 /** Radius of the frosted backdrop blur, in pixels. */

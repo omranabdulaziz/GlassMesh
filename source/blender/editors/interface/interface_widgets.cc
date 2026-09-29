@@ -5195,8 +5195,20 @@ static void widget_tab(Button *but,
   WidgetBase wtb;
   widget_init(&wtb);
 
-  /* half rounded */
-  round_box_edges(&wtb, roundboxalign, rect, rad);
+  if (glass_enabled()) {
+    /* GlassMesh: tabs are fully rounded pills, slightly inset from their neighbors. */
+    rcti rect_pill = *rect;
+    const int inset = int(2.0f * UI_SCALE_FAC * zoom);
+    if (BLI_rcti_size_x(&rect_pill) > 4 * inset) {
+      BLI_rcti_pad(&rect_pill, -inset, 0);
+    }
+    const float rad_pill = std::min(rad * 1.5f, 0.5f * float(BLI_rcti_size_y(&rect_pill)));
+    round_box_edges(&wtb, CNR_ALL, &rect_pill, rad_pill);
+  }
+  else {
+    /* half rounded */
+    round_box_edges(&wtb, roundboxalign, rect, rad);
+  }
 
   /* draw inner */
 #ifdef USE_TAB_SHADED_HIGHLIGHT
