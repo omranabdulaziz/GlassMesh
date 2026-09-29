@@ -112,13 +112,23 @@ THEME = {
     },
     "regions": {
         "asset_shelf": {"back": "1c3d66b8", "header_back": "1c3d66b8"},
-        "channels": {"back": "142c4cd0", "text": TEXT_DIM},
+        "channels": {"back": "142c4cd0", "text": TEXT_DIM, "text_selected": WHITE},
         "scrubbing": {"back": "142c4ce0", "text": TEXT_DIM},
         # Used for the glass base of panels in overlapping side-bars, keep the region itself clear.
         "sidebars": {"back": "2a4a7400", "tab_back": "1f3a6199"},
     },
     "common": {
-        "anim": {"playhead": ACCENT},
+        # Channel rows are light glass bands instead of dark gray ones. Some are drawn opaque in the
+        # channel list, so they are blue rather than translucent white.
+        "anim": {
+            "playhead": ACCENT,
+            "channels": "3a8ee659",
+            "channels_sub": "2b4f7c59",
+            "channel": "ffffff0a",
+            "channel_selected": "3a8ee633",
+            "channel_group": "ffffff14",
+            "channel_group_active": "3a8ee640",
+        },
     },
     "space_properties": {
         "back": EDITOR_LIGHT,
@@ -140,10 +150,11 @@ THEME = {
         "grid_major": "ffffff3d",
     },
     "space_file": {"back": EDITOR_LIGHT, "header": HEADER, "hilite": ACCENT, "row_alternate": "ffffff05"},
-    "space_graph": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0c1524ff"},
+    # Grid lines are drawn opaque: a slightly lighter blue than the editor instead of near black.
+    "space_graph": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "34557fff"},
     "space_info": {"back": EDITOR_DARK, "header": HEADER_DARK, "info_selected": "2f6fb8ff"},
-    "space_action": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0c1524ff", "anim_active": "2f6fb866"},
-    "space_nla": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0e1a2cff"},
+    "space_action": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "34557fff", "anim_active": "2f6fb866"},
+    "space_nla": {"back": EDITOR_DARK, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "34557fff"},
     "space_sequencer": {"back": EDITOR_OPAQUE, "header": HEADER_DARK, "text": TEXT_DIM, "grid": "0e1a2cff"},
     "space_image": {"back": EDITOR_DARK, "header": HEADER_DARK},
     "space_text": {"back": EDITOR_DARK, "header": HEADER_DARK, "shade2": "2a4466e6", "line_numbers": "7f95b0ff", "grid": "0e1726ff"},
