@@ -2870,7 +2870,7 @@ GHOST_TSuccess GHOST_SystemWin32::showMessageBox(const char *title,
   config.pszMainIcon = (dialog_options & GHOST_DialogError   ? TD_ERROR_ICON :
                         dialog_options & GHOST_DialogWarning ? TD_WARNING_ICON :
                                                                TD_INFORMATION_ICON);
-  config.pszWindowTitle = L"Blender";
+  config.pszWindowTitle = L"GlassMesh";
   config.pszMainInstruction = title_16;
   config.pszContent = message_16;
   const bool has_link = link && strlen(link);

@@ -585,14 +585,14 @@ GHOST_TSuccess GHOST_SystemCocoa::init()
         NSMenu *appMenu;
 
         /* Create the application menu. */
-        appMenu = [[NSMenu alloc] initWithTitle:@"Blender"];
+        appMenu = [[NSMenu alloc] initWithTitle:@"GlassMesh"];
 
-        [appMenu addItemWithTitle:@"About Blender"
+        [appMenu addItemWithTitle:@"About GlassMesh"
                            action:@selector(orderFrontStandardAboutPanel:)
                     keyEquivalent:@""];
         [appMenu addItem:[NSMenuItem separatorItem]];
 
-        menuItem = [appMenu addItemWithTitle:@"Hide Blender"
+        menuItem = [appMenu addItemWithTitle:@"Hide GlassMesh"
                                       action:@selector(hide:)
                                keyEquivalent:@"h"];
         menuItem.keyEquivalentModifierMask = NSEventModifierFlagCommand;
@@ -607,7 +607,7 @@ GHOST_TSuccess GHOST_SystemCocoa::init()
                            action:@selector(unhideAllApplications:)
                     keyEquivalent:@""];
 
-        menuItem = [appMenu addItemWithTitle:@"Quit Blender"
+        menuItem = [appMenu addItemWithTitle:@"Quit GlassMesh"
                                       action:@selector(terminate:)
                                keyEquivalent:@"q"];
         menuItem.keyEquivalentModifierMask = NSEventModifierFlagCommand;
