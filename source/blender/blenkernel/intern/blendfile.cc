@@ -1550,6 +1550,9 @@ UserDef *BKE_blendfile_userdef_from_defaults()
     BLI_addtail(&userdef->themes, btheme);
   }
 
+  /* GlassMesh: wider gaps between editors, so the glass "wallpaper" shows between them. */
+  userdef->border_width = 4;
+
 #ifdef WITH_PYTHON_SECURITY
   /* use alternative setting for security nuts
    * otherwise we'd need to patch the binary blob - startup.blend.c */
