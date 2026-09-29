@@ -614,7 +614,7 @@ static void widget_init(WidgetBase *wtb)
   /* GlassMesh: every widget gets a subtle rim highlight and sheen by default. */
   wtb->uniform_params.glass_rim = glass_rim_strength();
   wtb->uniform_params.glass_sheen = glass_sheen_strength();
-  wtb->uniform_params._pad = 0.0f;
+  wtb->uniform_params.glass_corner = glass_corner_exponent();
 }
 
 /**
@@ -3365,9 +3365,16 @@ static void widget_state_menu_item(WidgetType *wt,
   else if (state->but_flag & BUT_INACTIVE) {
     /* Inactive. */
     if (state->but_flag & UI_HOVER) {
-      color_blend_v3_v3(wt->wcol.inner, wt->wcol.text, 0.2f);
+      if (glass_enabled()) {
+        /* GlassMesh: a quieter accent highlight than active items (see below). */
+        copy_v4_v4_uchar(wt->wcol.inner, wt->wcol.inner_sel);
+        wt->wcol.inner[3] = std::min<uchar>(wt->wcol.inner[3], 140);
+      }
+      else {
+        color_blend_v3_v3(wt->wcol.inner, wt->wcol.text, 0.2f);
+        wt->wcol.inner[3] = 255;
+      }
       copy_v3_v3_uchar(wt->wcol.text, wt->wcol.text_sel);
-      wt->wcol.inner[3] = 255;
     }
     color_blend_v3_v3(wt->wcol.text, wt->wcol.inner, 0.5f);
   }
@@ -3385,10 +3392,18 @@ static void widget_state_menu_item(WidgetType *wt,
   }
   else if (state->but_flag & UI_HOVER) {
     /* Regular hover. */
-    color_blend_v3_v3(wt->wcol.inner, wt->wcol.text, 0.2f);
+    if (glass_enabled()) {
+      /* GlassMesh: the accent color, like the highlighted item of Apple's menus, instead of an
+       * opaque gray bar over the glass. */
+      copy_v4_v4_uchar(wt->wcol.inner, wt->wcol.inner_sel);
+      wt->wcol.inner[3] = std::min<uchar>(wt->wcol.inner[3], 217);
+    }
+    else {
+      color_blend_v3_v3(wt->wcol.inner, wt->wcol.text, 0.2f);
+      wt->wcol.inner[3] = 255;
+    }
     color_blend_v3_v3(wt->wcol.outline, wt->wcol.outline_sel, 0.5f);
     copy_v3_v3_uchar(wt->wcol.text, wt->wcol.text_sel);
-    wt->wcol.inner[3] = 255;
     wt->wcol.text[3] = 255;
   }
   /* Subtle background for larger preview buttons, so text and icons feel connected (esp. for while
@@ -5260,6 +5275,14 @@ static void widget_toolbar_item(Button *but,
   const int inset = int(2.0f * UI_SCALE_FAC * zoom);
   if (BLI_rcti_size_x(&rect_tile) > 4 * inset && BLI_rcti_size_y(&rect_tile) > 4 * inset) {
     BLI_rcti_pad(&rect_tile, -inset, -inset);
+  }
+  /* Icon only tools are square tiles with continuous (squircle) corners, like app icons. Tools
+   * with a label (a wide tool-bar) keep the width of the button. */
+  const int tile_w = BLI_rcti_size_x(&rect_tile);
+  const int tile_h = BLI_rcti_size_y(&rect_tile);
+  if (but->drawstr.empty() && tile_w > tile_h) {
+    rect_tile.xmin += (tile_w - tile_h) / 2;
+    rect_tile.xmax = rect_tile.xmin + tile_h;
   }
   widget_roundbut_exec(but, wcol, &rect_tile, state, CNR_ALL, zoom * 1.6f);
 }

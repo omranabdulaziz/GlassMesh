@@ -22,6 +22,7 @@
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
+#include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
 
 #include "BLI_listbase.h"
@@ -48,6 +49,7 @@
 #include "BLT_translation.hh"
 
 #include "UI_abstract_view.hh"
+#include "UI_glass.hh"
 #include "UI_interface.hh"
 #include "UI_interface_icons.hh"
 #include "UI_interface_layout.hh"
@@ -2236,6 +2238,56 @@ static bool but_pixelrect_in_view(const ARegion *region, const rcti *rect)
   return BLI_rcti_isect(&region->winrct, &rect_winspace, nullptr);
 }
 
+/**
+ * GlassMesh: the workspace tabs of the top bar sit together in one glass capsule (with the button
+ * to add a workspace after them), like the tab bars of the mockups.
+ */
+static void block_draw_glass_tab_capsule(const ARegion *region, Block *block)
+{
+  rctf capsule;
+  BLI_rctf_init_minmax(&capsule);
+  bool has_tabs = false;
+  for (Button &but : block->buttons()) {
+    if (but.type != ButtonType::Tab || (but.flag & UI_HIDDEN)) {
+      continue;
+    }
+    rcti rect;
+    button_to_pixelrect(&rect, region, block, &but);
+    BLI_rctf_do_minmax_v(&capsule, float2(rect.xmin, rect.ymin));
+    BLI_rctf_do_minmax_v(&capsule, float2(rect.xmax, rect.ymax));
+    has_tabs = true;
+  }
+  if (!has_tabs) {
+    return;
+  }
+  /* The "+" button right after the tabs. */
+  for (Button &but : block->buttons()) {
+    if (but.type == ButtonType::Tab || (but.flag & UI_HIDDEN)) {
+      continue;
+    }
+    rcti rect;
+    button_to_pixelrect(&rect, region, block, &but);
+    if (rect.xmin >= capsule.xmax - 1.0f && rect.xmin <= capsule.xmax + 0.5f * UI_UNIT_X &&
+        rect.ymin < capsule.ymax && rect.ymax > capsule.ymin)
+    {
+      capsule.xmax = rect.xmax;
+    }
+  }
+  BLI_rctf_pad(&capsule, 3.0f * UI_SCALE_FAC, 1.0f * UI_SCALE_FAC);
+  const float inner[4] = {1.0f, 1.0f, 1.0f, 0.1f};
+  const float outline[4] = {1.0f, 1.0f, 1.0f, 0.22f};
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_roundbox_4fv_glass(&capsule,
+                          inner,
+                          nullptr,
+                          1.0f,
+                          outline,
+                          U.pixelsize,
+                          BLI_rctf_size_y(&capsule) * 0.5f,
+                          glass_rim_strength(),
+                          glass_sheen_strength());
+}
+
 void block_draw(const bContext *C, Block *block)
 {
   uiStyle style = *style_get_dpi(); /* XXX pass on as arg */
@@ -2292,6 +2344,13 @@ void block_draw(const bContext *C, Block *block)
                        panel_should_show_background(region, block->panel->type),
                        region->flag & RGN_FLAG_SEARCH_FILTER_ACTIVE);
   }
+  if (glass_enabled()) {
+    const ScrArea *area = CTX_wm_area(C);
+    if (area && area->spacetype == SPACE_TOPBAR && region->regiontype == RGN_TYPE_HEADER) {
+      block_draw_glass_tab_capsule(region, block);
+    }
+  }
+
   /* Shared layout panel backdrop style between redo region and popups. */
   if (block->panel && ELEM(region->regiontype, RGN_TYPE_HUD, RGN_TYPE_TEMPORARY)) {
     /* TODO: Add as theme color. */

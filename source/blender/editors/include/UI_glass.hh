@@ -48,6 +48,15 @@ inline float glass_rim_strength()
   return glass_enabled() ? 0.3f : 0.0f;
 }
 
+/**
+ * Exponent of the continuous ("squircle") corners of glass widgets and editors: the corners are a
+ * superellipse like Apple's instead of a circular arc. 0 keeps Blender's circular corners.
+ */
+inline float glass_corner_exponent()
+{
+  return glass_enabled() ? 4.0f : 0.0f;
+}
+
 /** Strength of the soft sheen over the upper part of glass buttons. */
 inline float glass_sheen_strength()
 {

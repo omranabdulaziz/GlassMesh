@@ -3532,6 +3532,12 @@ void ED_region_draw_overflow_indication(const ScrArea *area,
     ui::theme::get_color_3fv(TH_BLACK, opaque);
     opaque[3] = 0.2f;
   }
+  else if (ui::glass_enabled()) {
+    /* GlassMesh: the region background is glass, an opaque fade would be a dark smudge on it.
+     * Hidden content fades into frost instead. */
+    copy_v3_fl(opaque, 1.0f);
+    opaque[3] = 0.16f;
+  }
   else {
     ui::theme::get_color_3fv(TH_BACK, opaque);
     opaque[3] = 1.0f;

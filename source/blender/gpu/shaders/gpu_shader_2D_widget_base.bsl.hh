@@ -24,8 +24,8 @@ struct VertOut {
   [[flat]] float4 border_color;
   [[flat]] float4 emboss_color;
   [[flat]] float4 out_round_corners;
-  /* GlassMesh: x = rim highlight strength, y = sheen strength. */
-  [[flat]] float2 glass;
+  /* GlassMesh: x = rim highlight strength, y = sheen strength, z = corner exponent. */
+  [[flat]] float3 glass;
   [[no_perspective]] float but_co;
   [[no_perspective]] float2 uv_interp;
   [[no_perspective]] float4 inner_color;
@@ -62,7 +62,8 @@ struct [[host_shared]] Widget {
   /* GlassMesh: rim highlight and sheen strength (0 disables). */
   float glass_rim;
   float glass_sheen;
-  float _pad0;
+  /* GlassMesh: superellipse exponent of the corners, 0 for circular corners. */
+  float glass_corner;
 
   /* We encode alpha check and discard factor together. */
   bool do_alpha_check() const
@@ -105,7 +106,7 @@ struct [[host_shared]] Widget {
     v_out.uv_interp = pos - rect.xz;
     v_out.out_rect_size = rect.yw - rect.xz;
     v_out.out_round_corners = rads * round_corners;
-    v_out.glass = float2(glass_rim, glass_sheen);
+    v_out.glass = float3(glass_rim, glass_sheen, glass_corner);
 
     float2 uv = v_out.uv_interp / v_out.out_rect_size;
     float fac = clamp((shade_dir > 0.0f) ? uv.y : uv.x, 0.0f, 1.0f);
@@ -231,7 +232,7 @@ struct [[host_shared]] Widget {
     v_out.line_width = 0.0f;
     v_out.border_color = float4(0.0f);
     v_out.emboss_color = float4(0.0f);
-    v_out.glass = float2(0.0f);
+    v_out.glass = float3(0.0f);
 
     v_out.but_co = -2.0f;
 
@@ -363,6 +364,15 @@ struct FragOut {
   uv_sdf -= corner_rad;
   float inner_sdf = max(0.0f, min(uv_sdf.x, uv_sdf.y));
   float outer_sdf = -length(min(uv_sdf, 0.0f));
+  /* GlassMesh: continuous ("squircle") corners: a superellipse instead of a circular arc. Round
+   * ends of pill shaped widgets (radius of half their size) stay circular. */
+  if (v_out.glass.z > 2.0f && corner_rad > 0.0f &&
+      corner_rad < 0.45f * min(v_out.out_rect_size.x * ratio, v_out.out_rect_size.y))
+  {
+    float2 corner = abs(min(uv_sdf, 0.0f)) / corner_rad;
+    float n = v_out.glass.z;
+    outer_sdf = -pow(pow(corner.x, n) + pow(corner.y, n), 1.0f / n) * corner_rad;
+  }
   float sdf = inner_sdf + outer_sdf + corner_rad;
 
   /* Clamp line width to be at least 1px wide. This can happen if the projection matrix

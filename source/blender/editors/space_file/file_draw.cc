@@ -68,6 +68,7 @@
 #include "ED_fileselect.hh"
 #include "ED_screen.hh"
 
+#include "UI_glass.hh"
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
@@ -1108,7 +1109,16 @@ static void draw_background(FileLayout *layout, View2D *v2d)
   immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
   float col_alternating[4];
   ui::theme::get_color_4fv(TH_ROW_ALTERNATE, col_alternating);
-  immUniformThemeColorBlend(TH_BACK, TH_ROW_ALTERNATE, col_alternating[3]);
+  const bool use_glass = ui::glass_enabled();
+  const GPUBlend old_blend = GPU_blend_get();
+  if (use_glass) {
+    /* GlassMesh: the stripes are a light veil on the glass, opaque ones would cover it. */
+    immUniformColor4f(1.0f, 1.0f, 1.0f, max_ff(col_alternating[3], 0.045f));
+    GPU_blend(GPU_BLEND_ALPHA);
+  }
+  else {
+    immUniformThemeColorBlend(TH_BACK, TH_ROW_ALTERNATE, col_alternating[3]);
+  }
 
   /* alternating flat shade background */
   for (i = 2; (i <= layout->rows + 1); i += 2) {
@@ -1125,6 +1135,7 @@ static void draw_background(FileLayout *layout, View2D *v2d)
   }
 
   immUnbindProgram();
+  GPU_blend(old_blend);
 }
 
 static void draw_dividers(FileLayout *layout, View2D *v2d)
@@ -1184,11 +1195,21 @@ static void draw_fixed_header_background(const View2D *v2d, const float height)
   uint pos = GPU_vertformat_attr_add(immVertexFormat(), "pos", gpu::VertAttrType::SFLOAT_32_32);
 
   immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-  immUniformThemeColorShade(TH_BACK, 11);
+  const bool use_glass = ui::glass_enabled();
+  const GPUBlend old_blend = GPU_blend_get();
+  if (use_glass) {
+    /* GlassMesh: a lighter strip of glass instead of an opaque band. */
+    immUniformColor4f(1.0f, 1.0f, 1.0f, 0.07f);
+    GPU_blend(GPU_BLEND_ALPHA);
+  }
+  else {
+    immUniformThemeColorShade(TH_BACK, 11);
+  }
 
   immRectf(pos, v2d->cur.xmin, v2d->cur.ymax - height, v2d->cur.xmax, v2d->cur.ymax);
 
   immUnbindProgram();
+  GPU_blend(old_blend);
 }
 
 static void draw_columnheader_columns(const FileSelectParams *params,

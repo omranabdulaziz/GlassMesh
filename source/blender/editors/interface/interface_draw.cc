@@ -126,6 +126,7 @@ void draw_roundbox_4fv_glass(const rctf *rect,
   /* GlassMesh: rim highlight and sheen (zero for regular round-boxes). */
   widget_params.glass_rim = glass_rim;
   widget_params.glass_sheen = glass_sheen;
+  widget_params.glass_corner = glass_corner_exponent();
 
   gpu::Batch *batch = batch_roundbox_widget_get();
   GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_WIDGET_BASE);

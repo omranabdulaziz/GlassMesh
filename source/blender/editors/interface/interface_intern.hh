@@ -1418,7 +1418,8 @@ struct WidgetBaseParameters {
   float glass_rim;
   /** GlassMesh: strength of the soft vertical sheen over the widget body (0 disables). */
   float glass_sheen;
-  float _pad;
+  /** GlassMesh: superellipse exponent of the corners, 0 for circular corners. */
+  float glass_corner;
 };
 
 enum {

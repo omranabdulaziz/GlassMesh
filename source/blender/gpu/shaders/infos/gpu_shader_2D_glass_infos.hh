@@ -90,6 +90,10 @@ PUSH_CONSTANT(float4, optics)
 /* x: rim width, y: rim light, z: rim light on the edges facing away from the light, w: mip-map
  * level of the sharper wallpaper seen through the refracting edge. */
 PUSH_CONSTANT(float4, rim)
+/* x: diffusion (how much of what is behind is replaced by its average color, frosted glass
+ * scatters light), y: mip-map level of that average, z: superellipse exponent of the corners
+ * (0 for circular corners). */
+PUSH_CONSTANT(float4, diffuse)
 PUSH_CONSTANT(int, card_mode)
 SAMPLER(0, sampler2D, frosted)
 SAMPLER(1, sampler2D, image)
