@@ -144,19 +144,17 @@ static void glass_wallpaper_free_textures()
 /** Draw \a src into the whole of \a dst with the wallpaper shader (off-screen pass). */
 static void glass_wallpaper_pass(GPUOffScreen *dst, gpu::Texture *src, float lod, float2 step)
 {
-  const int w = GPU_offscreen_width(dst);
-  const int h = GPU_offscreen_height(dst);
-
   GPU_offscreen_bind(dst, true);
   GPU_matrix_push_projection();
   GPU_matrix_push();
-  GPU_matrix_ortho_2d_set(0.0f, float(w), 0.0f, float(h));
+  /* Identity matrices: the quad is given in normalized device coordinates. */
+  GPU_matrix_identity_projection_set();
   GPU_matrix_identity_set();
 
   gpu::Batch *batch = GPU_batch_preset_quad();
   GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_GLASS_WALLPAPER);
-  const float rect[4] = {0.0f, 0.0f, float(w), float(h)};
-  const float uv[4] = {1.0f / float(w), 1.0f / float(h), 0.0f, 0.0f};
+  const float rect[4] = {-1.0f, -1.0f, 1.0f, 1.0f};
+  const float uv[4] = {0.5f, 0.5f, 0.5f, 0.5f};
   const float tint[4] = {0.0f, 0.0f, 0.0f, 0.0f};
   const float params[4] = {lod, 1.0f, 1.0f, 0.0f};
   const float blur[4] = {step.x, step.y, 1.0f, 0.0f};
