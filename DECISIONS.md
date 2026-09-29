@@ -235,3 +235,23 @@ unchanged. Where these decisions replace earlier ones, the earlier number is giv
     menu bar.** The mockups show both. The first needs a window without a title bar, which also
     removes the area used to drag the window around. The second needs a bridge between Blender's
     Python menus and native menus. Neither could be done safely without a Mac to test on.
+56. **One application menu in the top bar.** Like the mockups, the top bar shows the app name and
+    the workspace tabs. *File, Edit, Render, Window* and *Help* are in one *GlassMesh* menu (the
+    logo and the name), which works like the collapsed menus Blender already has. Right-click the
+    top bar and enable *Show Menus* to get the separate menus back. Without glass, the top bar is
+    unchanged.
+57. **Glass navigation buttons.** The zoom, pan, camera and projection buttons of the 3D viewport
+    are small glass circles, as in the mockups. Blender only shows a circle while hovering them.
+58. **Rounder nodes.** Nodes have a corner radius of 0.32 widget units instead of 0.2.
+59. **Glass node and image editors** (revisits the opaque editors of version 1). The node editor
+    and the image/UV editor are drawn through a color-managed viewport, which is why version 1 kept
+    them opaque. Their backgrounds are now translucent cards like the other editors: the node
+    editor clears its background with the theme alpha, and the image editor leaves the area around
+    the image transparent (images keep their checkerboard). The sequencer is still opaque.
+60. **Outliner rows.** With glass the outliner has no alternating row stripes, which were drawn
+    opaque and covered the glass. The active row is an accent blue pill and other selected rows a
+    quieter blue pill, both with white text instead of Blender's orange text.
+61. **The frosted tint can't be edited in the preferences.** The tint amount of the frosted
+    window background is the alpha of the theme's *Editor Border* color. The preferences only
+    show that color's RGB, so the amount can only be changed in `apply_glassmesh_theme.py` (or the
+    built-in default theme). The color itself can be edited as usual.

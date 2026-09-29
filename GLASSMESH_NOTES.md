@@ -54,16 +54,18 @@ sharper and faster). The viewport shows Blender's default scene.
 - `shaders/gpu_shader_2D_widget_base.bsl.hh` – rim highlight and sheen for all widgets.
 - `GPU_shader_builtin.hh`, `intern/gpu_shader_builtin.cc`, `CMakeLists.txt` – registration.
 
-**Glass 3D viewport** (`source/blender/draw/engines/overlay/`)
+**Glass 3D viewport, image and node editors** (`source/blender/draw/engines/overlay/`)
 
 - `overlay_background.hh`, `overlay_shader_shared.hh`, `shaders/overlay_background_frag.glsl` – the
   *Glass* background type (`TH_BACKGROUND_GLASS` in `makesdna/DNA_theme_types.h`) leaves the
-  background transparent.
+  background transparent, the image editor leaves the area around the image transparent.
+- `editors/space_node/node_draw.cc` – the node editor clears its background with the theme alpha.
 
 **Window compositing** (`source/blender/windowmanager/`)
 
-- `intern/wm_draw_glass.cc` (new) – window capture and live blurred backdrop per region, glass
-  viewport backdrop.
+- `intern/wm_draw_glass.cc` (new) – window capture and live blurred backdrop per region, what is
+  drawn behind glass viewports (the wallpaper for the 3D viewport, a glass card for the image
+  editor).
 - `intern/wm_draw.cc` – draws the frosted window background, blends translucent editors and glass
   viewports over it, and draws the live frosted backdrop under overlapping regions (headers,
   tool-bars, side-bars) and floating regions (menus, popups, tool-tips).
@@ -81,10 +83,15 @@ sharper and faster). The viewport shows Blender's default scene.
 - `interface/interface_panel.cc` – panels as glass cards, panel rims.
 - `interface/interface_button_sections.cc` – header button groups as floating glass pills.
 - `interface/interface_icons.cc` – tool icons aren't inverted for translucent tool buttons.
-- `interface/resources.cc` – translucent (pre-multiplied) region background clears with glass.
+- `interface/resources.cc`, `include/UI_resources.hh` – translucent (pre-multiplied) region
+  background clears with glass, `get_color_back_glass_4fv()`.
 - `screen/screen_draw.cc`, `screen/screen_intern.hh` – editor gaps show the frosted wallpaper, rim
   on editor outlines, larger corner radius.
-- `space_outliner/outliner_draw.cc` – pill shaped row highlights.
+- `space_outliner/outliner_draw.cc` – pill shaped row highlights, no row stripes with glass.
+- `space_view3d/view3d_gizmo_navigate.cc` – glass circles behind the navigation buttons.
+- `space_node/node_intern.hh` – rounder node corners with glass.
+- `screen/screen_edit.cc`, `blenloader/intern/versioning_defaults.cc`,
+  `scripts/startup/bl_ui/space_topbar.py` – the top bar's single *GlassMesh* application menu.
 
 **Theme and defaults**
 
