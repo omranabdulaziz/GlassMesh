@@ -4,6 +4,8 @@
 
 #include "GHOST_WindowCocoa.hh"
 
+#include <algorithm>
+
 #include "GHOST_ContextNone.hh"
 #include "GHOST_Debug.hh"
 #include "GHOST_SystemCocoa.hh"
@@ -489,6 +491,10 @@ GHOST_WindowCocoa::~GHOST_WindowCocoa()
       [metal_view_ release];
       metal_view_ = nil;
     }
+    if (effect_view_) {
+      [effect_view_ release];
+      effect_view_ = nil;
+    }
     if (metal_layer_) {
       [metal_layer_ release];
       metal_layer_ = nil;
@@ -568,7 +574,72 @@ void GHOST_WindowCocoa::setPath(const char *filepath)
 GHOST_TSuccess GHOST_WindowCocoa::applyWindowDecorationStyle()
 {
   @autoreleasepool {
-    if (window_decoration_style_flags_ & GHOST_kDecorationColoredTitleBar) {
+    /* GlassMesh: the window buttons in the application's top bar: the content extends under a
+     * transparent title bar without a title. */
+    const bool integrated = (window_decoration_style_flags_ & GHOST_kDecorationIntegratedTitleBar);
+    NSWindowStyleMask style_mask = window_.styleMask;
+    if (integrated) {
+      style_mask |= NSWindowStyleMaskFullSizeContentView;
+    }
+    else {
+      style_mask &= ~NSWindowStyleMaskFullSizeContentView;
+    }
+    const bool style_changed = (style_mask != window_.styleMask);
+    if (style_changed) {
+      /* Keep the content size: the stored window size is the content size, growing the content
+       * by the title bar would grow the window on every start. */
+      const bool is_fullscreen = (window_.styleMask & NSWindowStyleMaskFullScreen);
+      const NSRect content_rect = [window_ contentRectForFrameRect:window_.frame];
+      window_.styleMask = style_mask;
+      if (!is_fullscreen) {
+        NSRect frame = [window_ frameRectForContentRect:content_rect];
+        if (window_.screen) {
+          frame = [window_ constrainFrameRect:frame toScreen:window_.screen];
+        }
+        [window_ setFrame:frame display:NO];
+      }
+    }
+    window_.titleVisibility = integrated ? NSWindowTitleHidden : NSWindowTitleVisible;
+
+    /* GlassMesh: see-through window: the view has transparency, the system blurs what is behind
+     * the window in an effect view behind it. Needs the Metal view (not the OpenGL fallback). */
+    bool see_through = (window_decoration_style_flags_ & GHOST_kDecorationSeeThrough);
+    if (see_through && !metal_view_) {
+      see_through = false;
+      window_decoration_style_flags_ = GHOST_TWindowDecorationStyleFlags(
+          window_decoration_style_flags_ & ~GHOST_kDecorationSeeThrough);
+    }
+    if (see_through && effect_view_ == nil) {
+      /* The effect view becomes the content view, with the Metal view filling it. Done once,
+       * afterwards only its visibility changes. */
+      effect_view_ = [[NSVisualEffectView alloc] initWithFrame:metal_view_.frame];
+      effect_view_.blendingMode = NSVisualEffectBlendingModeBehindWindow;
+      effect_view_.material = NSVisualEffectMaterialUnderWindowBackground;
+      effect_view_.state = NSVisualEffectStateActive;
+      effect_view_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+      [metal_view_ retain];
+      window_.contentView = effect_view_;
+      metal_view_.frame = effect_view_.bounds;
+      metal_view_.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+      [effect_view_ addSubview:metal_view_];
+      [metal_view_ release];
+      [window_ makeFirstResponder:metal_view_];
+    }
+    if (effect_view_ != nil) {
+      effect_view_.hidden = !see_through;
+    }
+    if (metal_layer_ != nil) {
+      metal_layer_.opaque = !see_through;
+    }
+    window_.opaque = !see_through;
+
+    if (see_through) {
+      /* Nothing may paint behind the effect view. A separate title bar keeps its standard
+       * (system material) look, the colored one would be an opaque bar over the glass. */
+      window_.backgroundColor = [NSColor clearColor];
+      window_.titlebarAppearsTransparent = integrated;
+    }
+    else if (window_decoration_style_flags_ & GHOST_kDecorationColoredTitleBar) {
       const float *background_color = window_decoration_style_settings_.colored_titlebar_bg_color;
 
       /* Title-bar background color. */
@@ -591,10 +662,84 @@ GHOST_TSuccess GHOST_WindowCocoa::applyWindowDecorationStyle()
       window_.titlebarAppearsTransparent = YES;
     }
     else {
-      window_.titlebarAppearsTransparent = NO;
+      window_.titlebarAppearsTransparent = integrated;
+    }
+
+    if (style_changed) {
+      /* The content size changed (it now includes the title bar, or not). */
+      updateDrawingSize();
+      system_cocoa_->handleWindowEvent(GHOST_kEventWindowSize, this);
     }
   }
   return GHOST_kSuccess;
+}
+
+int32_t GHOST_WindowCocoa::getIntegratedTitleBarInset()
+{
+  if (!(window_decoration_style_flags_ & GHOST_kDecorationIntegratedTitleBar)) {
+    return 0;
+  }
+  @autoreleasepool {
+    if (window_.styleMask & NSWindowStyleMaskFullScreen) {
+      /* The window buttons are hidden in full-screen. */
+      return 0;
+    }
+    NSButton *zoom_button = [window_ standardWindowButton:NSWindowZoomButton];
+    if (zoom_button == nil || zoom_button.hidden) {
+      return 0;
+    }
+    const NSRect frame = [zoom_button convertRect:zoom_button.bounds toView:nil];
+    return int32_t(NSMaxX(frame) + 10.0);
+  }
+}
+
+void GHOST_WindowCocoa::setTitleBarDragArea(int32_t height,
+                                            const GHOST_Rect *exclude,
+                                            int32_t exclude_num)
+{
+  titlebar_drag_height_ = height;
+  titlebar_no_drag_.assign(exclude, exclude + std::max(exclude_num, 0));
+}
+
+bool GHOST_WindowCocoa::handleTitleBarMouseDown(NSEvent *event)
+{
+  if (!(window_decoration_style_flags_ & GHOST_kDecorationIntegratedTitleBar) ||
+      titlebar_drag_height_ <= 0)
+  {
+    return false;
+  }
+  @autoreleasepool {
+    if (window_.styleMask & NSWindowStyleMaskFullScreen) {
+      return false;
+    }
+    NSView *view = (opengl_view_) ? (NSView *)opengl_view_ : (NSView *)metal_view_;
+    const NSPoint point = [view convertPoint:event.locationInWindow fromView:nil];
+    /* Client coordinates: from the top left. */
+    const int32_t x = int32_t(point.x);
+    const int32_t y = int32_t(view.bounds.size.height - point.y);
+    if (y < 0 || y >= titlebar_drag_height_) {
+      return false;
+    }
+    for (const GHOST_Rect &rect : titlebar_no_drag_) {
+      if (x >= rect.l_ && x < rect.r_ && y >= rect.t_ && y < rect.b_) {
+        return false;
+      }
+    }
+    if (event.clickCount >= 2) {
+      /* The same as double-clicking a title bar, following the system setting. */
+      NSString *action = [[NSUserDefaults standardUserDefaults]
+          stringForKey:@"AppleActionOnDoubleClick"];
+      if ([action isEqualToString:@"Minimize"]) {
+        [window_ performMiniaturize:nil];
+      }
+      else if (![action isEqualToString:@"None"]) {
+        [window_ performZoom:nil];
+      }
+      return true;
+    }
+    [window_ performWindowDragWithEvent:event];
+    return true;
+  }
 }
 
 void GHOST_WindowCocoa::getWindowBounds(GHOST_Rect &bounds) const

@@ -142,6 +142,8 @@ class GHOST_ContextMTL : public GHOST_Context {
   NSView *metal_view_;
   CAMetalLayer *metal_layer_;
   MTLRenderPipelineState *metal_render_pipeline_;
+  /** GlassMesh: the same, keeping the (pre-multiplied) alpha, for see-through windows. */
+  MTLRenderPipelineState *metal_render_pipeline_alpha_ = nil;
   bool owns_metal_device_;
 
   /** The virtualized default frame-buffer's texture. */

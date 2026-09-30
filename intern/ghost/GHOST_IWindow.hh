@@ -105,6 +105,21 @@ class GHOST_IWindow {
   virtual GHOST_TSuccess applyWindowDecorationStyle() = 0;
 
   /**
+   * GlassMesh: with #GHOST_kDecorationIntegratedTitleBar, the width at the left of the window
+   * (client coordinates) that the window buttons need, 0 when they aren't in the content.
+   */
+  virtual int32_t getIntegratedTitleBarInset() = 0;
+
+  /**
+   * GlassMesh: with #GHOST_kDecorationIntegratedTitleBar, the top \a height of the window (client
+   * coordinates, from the top) drags the window, except inside the \a exclude rectangles (the
+   * application's buttons there, client coordinates).
+   */
+  virtual void setTitleBarDragArea(int32_t height,
+                                   const GHOST_Rect *exclude,
+                                   int32_t exclude_num) = 0;
+
+  /**
    * Returns the window rectangle dimensions.
    * These are screen coordinates.
    * \param bounds: The bounding rectangle of the window.

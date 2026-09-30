@@ -160,7 +160,14 @@
 HANDLE_KEY_EVENT(keyUp)
 HANDLE_KEY_EVENT(flagsChanged)
 
-HANDLE_MOUSE_EVENT(mouseDown)
+/* GlassMesh: a press in the drag area of an integrated title bar drags the window. */
+- (void)mouseDown:(NSEvent *)event
+{
+  if (window_cocoa_->handleTitleBarMouseDown(event)) {
+    return;
+  }
+  system_cocoa_->handleMouseEvent(event);
+}
 HANDLE_MOUSE_EVENT(mouseUp)
 HANDLE_MOUSE_EVENT(rightMouseDown)
 HANDLE_MOUSE_EVENT(rightMouseUp)

@@ -293,6 +293,15 @@ void GHOST_ContextMTL::metalInit()
         out_tex.a = 1.0;
         return out_tex;
       }
+
+      /* GlassMesh: see-through windows keep the pre-multiplied alpha of the back-buffer. */
+      fragment float4 fragment_shader_alpha(Vertex v [[stage_in]],
+                      texture2d<float> t [[texture(0)]]) {
+        float4 out_tex = t.sample(s, v.texCoord);
+        out_tex.a = clamp(out_tex.a, 0.0, 1.0);
+        out_tex.rgb = clamp(out_tex.rgb, 0.0, out_tex.a * 16384.0);
+        return out_tex;
+      }
     )msl";
 
     MTLCompileOptions *options = [[[MTLCompileOptions alloc] init] autorelease];
@@ -325,6 +334,16 @@ void GHOST_ContextMTL::metalInit()
     }
 
     [desc.fragmentFunction release];
+
+    desc.fragmentFunction = [library newFunctionWithName:@"fragment_shader_alpha"];
+    metal_render_pipeline_alpha_ = (MTLRenderPipelineState *)[device
+        newRenderPipelineStateWithDescriptor:desc
+                                       error:&error];
+    if (error) {
+      /* Not fatal: see-through windows are then drawn opaque. */
+      metal_render_pipeline_alpha_ = nil;
+    }
+    [desc.fragmentFunction release];
     [desc.vertexFunction release];
   }
 }
@@ -334,6 +353,10 @@ void GHOST_ContextMTL::metalFree()
   if (metal_render_pipeline_) {
     [metal_render_pipeline_ release];
     metal_render_pipeline_ = nil;
+  }
+  if (metal_render_pipeline_alpha_) {
+    [metal_render_pipeline_alpha_ release];
+    metal_render_pipeline_alpha_ = nil;
   }
 
   for (int i = 0; i < METAL_SWAPCHAIN_SIZE; i++) {
@@ -429,8 +452,12 @@ void GHOST_ContextMTL::metalSwapBuffers()
 
     assert(contextPresentCallback);
     assert(default_framebuffer_metal_texture_[current_swapchain_index].texture != nil);
+    /* GlassMesh: see-through windows (non-opaque layer) keep the alpha. */
+    MTLRenderPipelineState *pipeline = (!metal_layer_.opaque && metal_render_pipeline_alpha_) ?
+                                           metal_render_pipeline_alpha_ :
+                                           metal_render_pipeline_;
     (*contextPresentCallback)(passDescriptor,
-                              (id<MTLRenderPipelineState>)metal_render_pipeline_,
+                              (id<MTLRenderPipelineState>)pipeline,
                               default_framebuffer_metal_texture_[current_swapchain_index].texture,
                               drawable);
   }

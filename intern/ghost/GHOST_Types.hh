@@ -372,6 +372,12 @@ enum GHOST_TEventType {
 
   GHOST_kEventOpenMainFile, /* Needed for Cocoa to open double-clicked .blend file at startup. */
   GHOST_kEventNativeResolutionChange, /* Needed for Cocoa when window moves to other display. */
+  /**
+   * GlassMesh: an item of the native application menu bar (macOS) was chosen.
+   * \note #GHOST_GetEventData returns the operator to run as a string:
+   * `IDNAME` or `IDNAME;property=value;...`.
+   */
+  GHOST_kEventNativeMenuOperator,
 
   GHOST_kEventImeCompositionStart,
   GHOST_kEventImeComposition,
@@ -781,6 +787,18 @@ enum GHOST_TUserSpecialDirTypes {
 enum GHOST_TWindowDecorationStyleFlags {
   GHOST_kDecorationNone = 0,
   GHOST_kDecorationColoredTitleBar = (1 << 0),
+  /**
+   * GlassMesh: the window content extends under a transparent title bar, the window buttons sit
+   * in the application's own top bar (only supported on macOS). The application reports which
+   * part of it can be used to drag the window, see #GHOST_IWindow::setTitleBarDragArea.
+   */
+  GHOST_kDecorationIntegratedTitleBar = (1 << 1),
+  /**
+   * GlassMesh: the window is see-through where the application draws with alpha, with the
+   * system's blur of what is behind the window (only supported on macOS with Metal). Cleared
+   * from the flags when it can't be used.
+   */
+  GHOST_kDecorationSeeThrough = (1 << 2),
 };
 
 struct GHOST_GPUDevice {

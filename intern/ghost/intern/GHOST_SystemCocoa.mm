@@ -38,6 +38,10 @@
 #include <Carbon/Carbon.h>
 #include <sys/time.h>
 
+#include <cstring>
+#include <initializer_list>
+#include <utility>
+
 /* --------------------------------------------------------------------
  * Keymaps, mouse converters.
  */
@@ -350,6 +354,73 @@ extern "C" int GHOST_HACK_getFirstFile(char buf[FIRSTFILEBUFLG])
  */
 
 /**
+ * GlassMeshMenuTarget
+ * GlassMesh: the target of the native menu bar items that run an operator, the operator is the
+ * item's represented object.
+ */
+@interface GlassMeshMenuTarget : NSObject
+@property(nonatomic, readonly, assign) GHOST_SystemCocoa *systemCocoa;
+- (instancetype)initWithSystemCocoa:(GHOST_SystemCocoa *)systemCocoa;
+- (void)runOperator:(NSMenuItem *)sender;
+@end
+
+@implementation GlassMeshMenuTarget
+@synthesize systemCocoa = system_cocoa_;
+- (instancetype)initWithSystemCocoa:(GHOST_SystemCocoa *)systemCocoa
+{
+  self = [super init];
+  if (self) {
+    system_cocoa_ = systemCocoa;
+  }
+  return self;
+}
+- (void)runOperator:(NSMenuItem *)sender
+{
+  system_cocoa_->handleNativeMenuOperator(sender.representedObject);
+}
+@end
+
+/**
+ * GlassMesh: add a native menu bar item that runs an operator (`IDNAME` or
+ * `IDNAME;property=value;...`), without key equivalent: the shortcuts are the application's.
+ */
+static void glassmesh_menu_add_operator(NSMenu *menu,
+                                        GlassMeshMenuTarget *target,
+                                        NSString *title,
+                                        NSString *operator_str)
+{
+  NSMenuItem *item = [menu addItemWithTitle:title
+                                     action:@selector(runOperator:)
+                              keyEquivalent:@""];
+  item.target = target;
+  item.representedObject = operator_str;
+}
+
+/** GlassMesh: add a menu with operator items (a null operator adds a separator). */
+static NSMenu *glassmesh_menu_create(NSMenu *menubar,
+                                     GlassMeshMenuTarget *target,
+                                     NSString *title,
+                                     const std::initializer_list<std::pair<NSString *, NSString *>>
+                                         items)
+{
+  NSMenu *menu = [[NSMenu alloc] initWithTitle:title];
+  for (const auto &[item_title, operator_str] : items) {
+    if (operator_str == nil) {
+      [menu addItem:[NSMenuItem separatorItem]];
+    }
+    else {
+      glassmesh_menu_add_operator(menu, target, item_title, operator_str);
+    }
+  }
+  NSMenuItem *menu_item = [[NSMenuItem alloc] init];
+  menu_item.submenu = menu;
+  [menubar addItem:menu_item];
+  [menu_item release];
+  [menu autorelease];
+  return menu;
+}
+
+/**
  * CocoaAppDelegate
  * ObjC object to capture applicationShouldTerminate, and send quit event
  */
@@ -584,12 +655,18 @@ GHOST_TSuccess GHOST_SystemCocoa::init()
         NSMenu *windowMenu;
         NSMenu *appMenu;
 
+        /* GlassMesh: the target of the menu items that run operators, kept for the lifetime of
+         * the application (menu items don't retain their target). */
+        GlassMeshMenuTarget *menu_target = [[GlassMeshMenuTarget alloc] initWithSystemCocoa:this];
+
         /* Create the application menu. */
         appMenu = [[NSMenu alloc] initWithTitle:@"GlassMesh"];
 
-        [appMenu addItemWithTitle:@"About GlassMesh"
-                           action:@selector(orderFrontStandardAboutPanel:)
-                    keyEquivalent:@""];
+        glassmesh_menu_add_operator(
+            appMenu, menu_target, @"About GlassMesh", @"WM_OT_splash_about");
+        [appMenu addItem:[NSMenuItem separatorItem]];
+        glassmesh_menu_add_operator(
+            appMenu, menu_target, @"Preferences…", @"SCREEN_OT_userpref_show");
         [appMenu addItem:[NSMenuItem separatorItem]];
 
         menuItem = [appMenu addItemWithTitle:@"Hide GlassMesh"
@@ -619,8 +696,47 @@ GHOST_TSuccess GHOST_SystemCocoa::init()
         [menuItem release];
         [appMenu release];
 
+        /* GlassMesh: the application's main menus in the menu bar, like in native apps (they are
+         * also in the "GlassMesh" menu of the top bar). */
+        glassmesh_menu_create(mainMenubar,
+                              menu_target,
+                              @"File",
+                              {{@"New", @"WM_OT_read_homefile"},
+                               {@"Open…", @"WM_OT_open_mainfile"},
+                               {@"Revert", @"WM_OT_revert_mainfile"},
+                               {nil, nil},
+                               {@"Save", @"WM_OT_save_mainfile"},
+                               {@"Save As…", @"WM_OT_save_as_mainfile"},
+                               {nil, nil},
+                               {@"Link…", @"WM_OT_link"},
+                               {@"Append…", @"WM_OT_append"}});
+        glassmesh_menu_create(mainMenubar,
+                              menu_target,
+                              @"Edit",
+                              {{@"Undo", @"ED_OT_undo"},
+                               {@"Redo", @"ED_OT_redo"},
+                               {@"Undo History…", @"ED_OT_undo_history"},
+                               {nil, nil},
+                               {@"Repeat Last", @"SCREEN_OT_repeat_last"},
+                               {@"Adjust Last Operation…", @"SCREEN_OT_redo_last"},
+                               {nil, nil},
+                               {@"Menu Search…", @"WM_OT_search_menu"}});
+        glassmesh_menu_create(mainMenubar,
+                              menu_target,
+                              @"Render",
+                              {{@"Render Image", @"RENDER_OT_render;use_viewport=1"},
+                               {@"Render Animation", @"RENDER_OT_render;animation=1;use_viewport=1"},
+                               {nil, nil},
+                               {@"View Render", @"RENDER_OT_view_show"},
+                               {@"View Animation", @"RENDER_OT_play_rendered_anim"}});
+
         /* Create the window menu. */
         windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
+
+        glassmesh_menu_add_operator(windowMenu, menu_target, @"New Window", @"WM_OT_window_new");
+        glassmesh_menu_add_operator(
+            windowMenu, menu_target, @"New Main Window", @"WM_OT_window_new_main");
+        [windowMenu addItem:[NSMenuItem separatorItem]];
 
         menuItem = [windowMenu addItemWithTitle:@"Minimize"
                                          action:@selector(performMiniaturize:)
@@ -645,6 +761,15 @@ GHOST_TSuccess GHOST_SystemCocoa::init()
 
         [mainMenubar addItem:menuItem];
         [menuItem release];
+
+        glassmesh_menu_create(
+            mainMenubar,
+            menu_target,
+            @"Help",
+            {{@"Manual", @"WM_OT_url_open_preset;type=MANUAL"},
+             {@"Report a Bug", @"WM_OT_url_open_preset;type=BUG"},
+             {nil, nil},
+             {@"Save Screenshot", @"SCREEN_OT_screenshot"}});
 
         [NSApp setMainMenu:mainMenubar];
         [NSApp setWindowsMenu:windowMenu];
@@ -1483,6 +1608,30 @@ bool GHOST_SystemCocoa::handleOpenDocumentRequest(void *filepathStr)
                                                   static_cast<GHOST_TEventDataPtr>(temp_buff)));
   }
   return YES;
+}
+
+void GHOST_SystemCocoa::handleNativeMenuOperator(void *operatorStr)
+{
+  NSString *operator_str = (NSString *)operatorStr;
+  @autoreleasepool {
+    /* The key window, or the front-most one. */
+    GHOST_IWindow *window = window_manager_->getActiveWindow();
+    if (window == nullptr && !window_manager_->getWindows().empty()) {
+      window = window_manager_->getWindows().front();
+    }
+    if (window == nullptr || operator_str == nil) {
+      return;
+    }
+    const char *utf8 = [operator_str UTF8String];
+    char *data = strdup(utf8 ? utf8 : "");
+    if (data == nullptr) {
+      return;
+    }
+    pushEvent(std::make_unique<GHOST_EventString>(getMilliSeconds(),
+                                                  GHOST_kEventNativeMenuOperator,
+                                                  window,
+                                                  static_cast<GHOST_TEventDataPtr>(data)));
+  }
 }
 
 GHOST_TSuccess GHOST_SystemCocoa::handleTabletEvent(void *eventPtr, short eventType)

@@ -141,6 +141,12 @@ class GHOST_SystemCocoa : public GHOST_System {
   bool handleOpenDocumentRequest(void *filepathStr);
 
   /**
+   * GlassMesh: an item of the native menu bar was chosen, \a operatorStr (an `NSString`) is the
+   * operator to run, see #GHOST_kEventNativeMenuOperator.
+   */
+  void handleNativeMenuOperator(void *operatorStr);
+
+  /**
    * Handles a drag & drop destination event. Called by GHOST_WindowCocoa window subclass.
    * \param eventType: The type of drag & drop event.
    * \param draggedObjectType: The type object concerned.

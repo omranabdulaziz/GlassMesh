@@ -13,6 +13,8 @@
 #  error Apple OSX only!
 #endif  // __APPLE__
 
+#include <vector>
+
 #include "GHOST_Window.hh"
 #ifdef WITH_INPUT_IME
 #  include "GHOST_Event.hh"
@@ -23,7 +25,9 @@
 @class CocoaOpenGLView;
 @class BlenderWindow;
 @class NSCursor;
+@class NSEvent;
 @class NSScreen;
+@class NSVisualEffectView;
 
 class GHOST_SystemCocoa;
 
@@ -96,6 +100,19 @@ class GHOST_WindowCocoa : public GHOST_Window {
    * Apply the window decoration style using the current flags and settings.
    */
   GHOST_TSuccess applyWindowDecorationStyle() override;
+
+  /** \copydoc #GHOST_IWindow::getIntegratedTitleBarInset */
+  int32_t getIntegratedTitleBarInset() override;
+
+  /** \copydoc #GHOST_IWindow::setTitleBarDragArea */
+  void setTitleBarDragArea(int32_t height, const GHOST_Rect *exclude, int32_t exclude_num) override;
+
+  /**
+   * GlassMesh: a mouse button was pressed in the view. With an integrated title bar, a press in
+   * its drag area drags (or zooms) the window, and true is returned: the event must not be passed
+   * on to the application.
+   */
+  bool handleTitleBarMouseDown(NSEvent *event);
 
   /**
    * Returns the window rectangle dimensions.
@@ -316,6 +333,12 @@ class GHOST_WindowCocoa : public GHOST_Window {
   bool immediate_draw_;
   bool is_dialog_;
   GHOST_GPUDevice preferred_device_;
+
+  /** GlassMesh: the system blur behind a see-through window, the view is inside it. */
+  NSVisualEffectView *effect_view_ = nullptr;
+  /** GlassMesh: the drag area of an integrated title bar, see #setTitleBarDragArea. */
+  int32_t titlebar_drag_height_ = 0;
+  std::vector<GHOST_Rect> titlebar_no_drag_;
 };
 
 #ifdef WITH_INPUT_IME

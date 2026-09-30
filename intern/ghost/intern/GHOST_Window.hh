@@ -98,6 +98,20 @@ class GHOST_Window : public GHOST_IWindow {
     return GHOST_kSuccess;
   }
 
+  /** \copydoc #GHOST_IWindow::getIntegratedTitleBarInset */
+  int32_t getIntegratedTitleBarInset() override
+  {
+    return 0;
+  }
+
+  /** \copydoc #GHOST_IWindow::setTitleBarDragArea */
+  void setTitleBarDragArea(int32_t /*height*/,
+                           const GHOST_Rect * /*exclude*/,
+                           int32_t /*exclude_num*/) override
+  {
+    /* Pass. */
+  }
+
   /** \copydoc #GHOST_IWindow::getCursorShape */
   inline GHOST_TStandardCursor getCursorShape() const override;
 
