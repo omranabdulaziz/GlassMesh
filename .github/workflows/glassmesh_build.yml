@@ -158,6 +158,11 @@ jobs:
       - name: Build
         run: make ninja
 
+      - name: Compile the app icon
+        # Not fatal: without it the app uses its `.icns` icon.
+        continue-on-error: true
+        run: bash tools/glassmesh/ci_macos_icon.sh ../build_darwin/bin/GlassMesh.app
+
       - name: Package
         run: |
           name="glassmesh-${GLASSMESH_VERSION}-macos-arm64-${GITHUB_SHA::8}"
