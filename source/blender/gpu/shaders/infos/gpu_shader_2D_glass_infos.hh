@@ -47,6 +47,9 @@ PUSH_CONSTANT(float4, tint)
 PUSH_CONSTANT(float4, params)
 /* Mask alpha range (smooth-step) that is considered to be glass. */
 PUSH_CONSTANT(float2, mask_threshold)
+/* 0: opaque glass, 1: see-through glass (the backdrop is pre-multiplied and has transparency,
+ * the window shows the desktop), 2: the coverage mask, to clear what the glass replaces. */
+PUSH_CONSTANT(int, backdrop_mode)
 SAMPLER(0, sampler2D, backdrop)
 SAMPLER(1, sampler2D, mask)
 VERTEX_SOURCE("gpu_shader_2D_glass_vert.glsl")
@@ -64,6 +67,8 @@ GPU_SHADER_CREATE_END()
  *   (refracted) towards the edge and lit along the inside of its edge (drawn before the editor).
  * - 2: the edge: the window background outside the rounded corners and a specular rim along
  *   the inside of the edge (drawn after the editor).
+ * - 3: the coverage of the card, to clear what is outside its rounded corners (multiplied) before
+ *   the edge of a see-through window.
  * Output is pre-multiplied.
  */
 GPU_SHADER_CREATE_INFO(gpu_shader_2D_glass_card)
@@ -92,7 +97,8 @@ PUSH_CONSTANT(float4, optics)
 PUSH_CONSTANT(float4, rim)
 /* x: diffusion (how much of what is behind is replaced by its average color, frosted glass
  * scatters light), y: mip-map level of that average, z: superellipse exponent of the corners
- * (0 for circular corners). */
+ * (0 for circular corners), w: opacity of the card in a see-through window (the system blurs the
+ * desktop behind it, the frosted wallpaper isn't used), 0 otherwise. */
 PUSH_CONSTANT(float4, diffuse)
 PUSH_CONSTANT(int, card_mode)
 SAMPLER(0, sampler2D, frosted)

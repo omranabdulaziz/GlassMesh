@@ -21,6 +21,10 @@ void main()
   float2 mask_uv = (win_co - mask_rect.xy) / mask_rect.zw;
   float mask_alpha = texture(mask, mask_uv).a;
   float coverage = smoothstep(mask_threshold.x, mask_threshold.y, mask_alpha);
+  if (backdrop_mode == 2) {
+    fragColor = float4(1.0f - coverage);
+    return;
+  }
   if (coverage <= 0.0f) {
     fragColor = float4(0.0f);
     return;
@@ -33,7 +37,7 @@ void main()
   float noise = glass_noise(win_co);
   float angle = noise * 6.2831853f;
 
-  float3 accum = float3(0.0f);
+  float4 accum = float4(0.0f);
   float weight_sum = 0.0f;
   for (int i = 0; i < GLASS_BLUR_SAMPLES; i++) {
     /* Vogel (golden angle) spiral, rotated per pixel. */
@@ -44,10 +48,13 @@ void main()
     float2 uv = (win_co + ofs - backdrop_rect.xy) / backdrop_rect.zw;
     /* Gaussian-like falloff. */
     float w = exp(-2.0f * t);
-    accum += textureLod(backdrop, uv, lod).rgb * w;
+    accum += textureLod(backdrop, uv, lod) * w;
     weight_sum += w;
   }
-  float3 color = accum / weight_sum;
+  accum /= weight_sum;
+  /* A see-through window has transparency: the backdrop is pre-multiplied. */
+  float alpha = (backdrop_mode == 1) ? accum.a : 1.0f;
+  float3 color = (backdrop_mode == 1) ? accum.rgb / max(alpha, 1e-4f) : accum.rgb;
 
   /* "Vibrancy": slightly boost saturation and brightness like frosted glass does. */
   float luma = dot(color, float3(0.2126f, 0.7152f, 0.0722f));
@@ -59,5 +66,5 @@ void main()
 
   fragColor = blender_srgb_to_framebuffer_space(float4(color, 1.0f));
   /* Pre-multiplied output. */
-  fragColor *= coverage;
+  fragColor *= alpha * coverage;
 }

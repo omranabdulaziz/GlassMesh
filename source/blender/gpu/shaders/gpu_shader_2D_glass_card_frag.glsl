@@ -94,6 +94,25 @@ void main()
     return;
   }
 
+  if (card_mode == 3) {
+    fragColor = float4(coverage);
+    return;
+  }
+
+  /* Bevel: light caught inside the thickness of the pane along its edge. */
+  float bevel = 1.0f - smoothstep(0.0f, optics.z, depth);
+  bevel = bevel * bevel * optics.w * edge_light(normal, 0.6f);
+
+  if (card_mode == 1 && diffuse.w > 0.0f) {
+    /* See-through window: the system blurs the desktop behind, the card is a milky pane on it. */
+    float alpha = clamp(diffuse.w + bevel, 0.0f, 1.0f);
+    float3 color = min(card_tint.rgb * diffuse.w + float3(bevel), float3(1.0f)) / alpha;
+    color += (glass_noise(win_co) - 0.5f) * card_look.w;
+    fragColor = blender_srgb_to_framebuffer_space(float4(clamp(color, 0.0f, 1.0f), 1.0f));
+    fragColor *= alpha * coverage;
+    return;
+  }
+
   if (card_mode == 1) {
     if (coverage <= 0.0f) {
       fragColor = float4(0.0f);
@@ -112,9 +131,7 @@ void main()
     float3 average = textureLod(image, wallpaper_uv(win_co), diffuse.y).rgb;
     color = mix(color, average, diffuse.x * (1.0f - lens));
     color = glass_look(color, card_tint, card_look, win_co);
-    /* Bevel: light caught inside the thickness of the pane along its edge. */
-    float bevel = 1.0f - smoothstep(0.0f, optics.z, depth);
-    color += bevel * bevel * optics.w * edge_light(normal, 0.6f);
+    color += bevel;
     fragColor = blender_srgb_to_framebuffer_space(float4(clamp(color, 0.0f, 1.0f), 1.0f));
     fragColor *= coverage;
     return;
@@ -122,7 +139,12 @@ void main()
 
   /* Outside of the rounded corners: the window background (with this card's shadow). */
   float4 outside = float4(0.0f);
-  if (coverage < 1.0f) {
+  if (coverage < 1.0f && diffuse.w > 0.0f) {
+    /* See-through window: the (pre-multiplied) window tint, the rest shows the desktop. */
+    outside = blender_srgb_to_framebuffer_space(float4(frame_tint.rgb, 1.0f)) * frame_tint.a *
+              (1.0f - coverage);
+  }
+  else if (coverage < 1.0f) {
     float3 frame = glass_look(texture(frosted, wallpaper_uv(win_co)).rgb, frame_tint, frame_look,
                               win_co);
     frame *= 1.0f - shadow_alpha(win_co);

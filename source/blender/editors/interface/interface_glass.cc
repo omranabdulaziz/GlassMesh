@@ -34,6 +34,7 @@
 #include "GPU_batch.hh"
 #include "GPU_batch_presets.hh"
 #include "GPU_framebuffer.hh"
+#include "GPU_immediate.hh"
 #include "GPU_matrix.hh"
 #include "GPU_shader.hh"
 #include "GPU_state.hh"
@@ -440,6 +441,22 @@ static void glass_frosted_look(float r_tint[4], float r_params[4])
 
 void glass_wallpaper_draw(const int window_size[2])
 {
+  if (g_backdrop.see_through) {
+    /* The desktop (blurred by the system) shows through, with the window tint on it. Written as
+     * is: the window has transparency, pre-multiplied. */
+    float tint[4];
+    theme::get_color_4fv(TH_EDITOR_BORDER, tint);
+    const GPUBlend old_blend = GPU_blend_get();
+    GPU_blend(GPU_BLEND_NONE);
+    const uint pos = GPU_vertformat_attr_add(
+        immVertexFormat(), "pos", gpu::VertAttrType::SFLOAT_32_32);
+    immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+    immUniformColor4f(tint[0] * tint[3], tint[1] * tint[3], tint[2] * tint[3], tint[3]);
+    immRectf(pos, 0.0f, 0.0f, float(window_size[0]), float(window_size[1]));
+    immUnbindProgram();
+    GPU_blend(old_blend);
+    return;
+  }
   if (!glass_wallpaper_ensure()) {
     return;
   }
@@ -515,7 +532,14 @@ bool glass_card_draw(const GlassCardPass pass,
   glass_card_look(card_tint, card_look);
   const float optics[4] = {14.0f * scale, 9.0f * scale, 5.0f * scale, 0.09f};
   const float rim[4] = {1.25f * scale, active ? 0.75f : 0.5f, 0.55f, 2.0f};
-  const float diffuse[4] = {0.5f, 6.5f, glass_corner_exponent(), 0.0f};
+  /* In a see-through window the cards are milky panes over the desktop the system blurs. */
+  const float see_through_opacity = 0.22f;
+  const float diffuse[4] = {
+      0.5f, 6.5f, glass_corner_exponent(), g_backdrop.see_through ? see_through_opacity : 0.0f};
+  if (g_backdrop.see_through) {
+    /* The window tint around the cards, pre-multiplied in the shader. */
+    theme::get_color_4fv(TH_EDITOR_BORDER, frame_tint);
+  }
 
   gpu::Batch *batch = GPU_batch_preset_quad();
   GPU_batch_program_set_builtin(batch, GPU_SHADER_2D_GLASS_CARD);
@@ -535,6 +559,14 @@ bool glass_card_draw(const GlassCardPass pass,
   GPU_batch_texture_bind(batch, "image", sharp);
 
   const GPUBlend old_blend = GPU_blend_get();
+  if (pass == GlassCardPass::Edge && g_backdrop.see_through) {
+    /* Clear what is outside the rounded corners first (the editor is drawn as a rectangle), the
+     * window tint that replaces it has transparency. */
+    GPU_batch_uniform_1i(batch, "card_mode", 3);
+    GPU_blend(GPU_BLEND_MULTIPLY);
+    GPU_batch_draw(batch);
+    GPU_batch_uniform_1i(batch, "card_mode", int(pass));
+  }
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);
   GPU_batch_draw(batch);
   GPU_blend(old_blend);

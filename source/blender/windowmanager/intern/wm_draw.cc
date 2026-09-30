@@ -1163,6 +1163,7 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
         else {
           /* Blit from off-screen buffer. */
           wm_draw_region_blit(&region, view);
+          wm_draw_glass_region_keep_opaque(win, &region);
         }
       }
     }
@@ -1726,6 +1727,8 @@ void wm_draw_update(bContext *C)
 
       wm_draw_window(C, &win);
       wm_draw_update_clear_window(C, &win);
+      /* GlassMesh: the empty part of the top bar moves the window (macOS). */
+      WM_window_titlebar_drag_area_update(&win);
 
       wm_window_swap_buffer_release(&win);
       PRF_frame_mark_end("Window Drawing"_ustr);

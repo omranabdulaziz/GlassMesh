@@ -101,6 +101,11 @@ struct GlassWindowBackdrop {
    * window with the wallpaper around it (see #glass_backdrop_compose). Null for the wallpaper.
    */
   gpu::Texture *behind = nullptr;
+  /**
+   * The window is see-through: the system blurs the desktop behind it (macOS). The window is
+   * drawn with transparency then, a light tint instead of the wallpaper.
+   */
+  bool see_through = false;
 };
 
 /** Set what is behind the window that is drawn next, null when done with it. */

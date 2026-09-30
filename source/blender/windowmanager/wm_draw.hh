@@ -51,6 +51,11 @@ void wm_draw_glass_window_end(wmWindowManager *wm, const wmWindow *win);
  * editors themselves. Their edges are drawn afterwards (#ED_screen_draw_edges).
  */
 void wm_draw_glass_cards(const wmWindow *win);
+/**
+ * An opaque editor (like the 3D viewport) in a see-through window stays opaque: nothing of the
+ * desktop shows through its colors.
+ */
+void wm_draw_glass_region_keep_opaque(const wmWindow *win, const ARegion *region);
 /** A non-viewport region that can be blended (translucent) with the glass style. */
 bool wm_draw_glass_region_is_translucent(const ARegion *region);
 /**

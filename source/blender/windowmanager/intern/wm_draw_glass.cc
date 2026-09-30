@@ -186,11 +186,15 @@ void wm_draw_glass_window_begin(const wmWindowManager *wm, const wmWindow *win)
     backdrop.desktop_size[0] = desktop_size.x;
     backdrop.desktop_size[1] = desktop_size.y;
   }
+  backdrop.see_through = WM_window_is_see_through(win);
   ui::glass_window_backdrop_set(&backdrop);
 
-  /* A child window lying over its parent shows (the frosted copy of) the parent behind it. */
+  /* A child window lying over its parent shows (the frosted copy of) the parent behind it. When
+   * see-through, the system shows the parent (blurred) itself. */
   const GlassWindow *parent_glass = win->parent ? g_windows.lookup_ptr(win->parent) : nullptr;
-  if (!has_position || !parent_glass || !parent_glass->frame || !ui::glass_blur_enabled()) {
+  if (!has_position || !parent_glass || !parent_glass->frame || !ui::glass_blur_enabled() ||
+      backdrop.see_through)
+  {
     return;
   }
   int2 parent_pos, parent_desktop_size;
@@ -231,7 +235,8 @@ void wm_draw_glass_window_end(wmWindowManager *wm, const wmWindow *win)
   ui::glass_window_backdrop_set(nullptr);
 
   const bool keep_frame = ui::glass_blur_enabled() && glass_window_has_children(wm, win) &&
-                          (WM_capabilities_flag() & WM_CAPABILITY_WINDOW_POSITION);
+                          (WM_capabilities_flag() & WM_CAPABILITY_WINDOW_POSITION) &&
+                          !WM_window_is_see_through(win);
   if (!keep_frame) {
     if (GlassWindow *glass_win = g_windows.lookup_ptr(win)) {
       if (glass_win->frame) {
@@ -289,6 +294,22 @@ void wm_draw_glass_cards(const wmWindow *win)
   }
 }
 
+void wm_draw_glass_region_keep_opaque(const wmWindow *win, const ARegion *region)
+{
+  if (!ui::glass_enabled() || !WM_window_is_see_through(win)) {
+    return;
+  }
+  const rcti &rect = region->winrct;
+  GPU_color_mask(false, false, false, true);
+  const uint pos = GPU_vertformat_attr_add(
+      immVertexFormat(), "pos", gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  immUniformColor4f(0.0f, 0.0f, 0.0f, 1.0f);
+  immRectf(pos, rect.xmin, rect.ymin, rect.xmax + 1, rect.ymax + 1);
+  immUnbindProgram();
+  GPU_color_mask(true, true, true, true);
+}
+
 bool wm_draw_glass_region_is_frosted_viewport(const ScrArea *area, const ARegion *region)
 {
   if (!ui::glass_enabled()) {
@@ -342,15 +363,20 @@ bool wm_draw_glass_region_is_translucent(const ARegion *region)
 }
 
 /** Bind the glass backdrop shader and set everything except the textures. */
+/** Modes of the backdrop shader, see #gpu_shader_2D_glass_backdrop. */
+enum class GlassBackdropMode { Opaque = 0, SeeThrough = 1, CoverageMask = 2 };
+
 static gpu::Shader *glass_backdrop_shader_bind(const float rect_geom[4],
                                                const float backdrop_rect[4],
                                                const float mask_rect[4],
                                                const float tint[4],
                                                const float params[4],
-                                               const float mask_threshold[2])
+                                               const float mask_threshold[2],
+                                               const GlassBackdropMode mode)
 {
   gpu::Shader *shader = GPU_shader_get_builtin_shader(GPU_SHADER_2D_GLASS_BACKDROP);
   GPU_shader_bind(shader);
+  GPU_shader_uniform_1i(shader, "backdrop_mode", int(mode));
   GPU_shader_uniform_4fv(shader, "rect_geom", rect_geom);
   GPU_shader_uniform_4fv(shader, "backdrop_rect", backdrop_rect);
   GPU_shader_uniform_4fv(shader, "mask_rect", mask_rect);
@@ -425,8 +451,11 @@ bool wm_draw_glass_capture(const wmWindow *win)
   /* Everything is covered: the mask threshold is below any possible alpha. */
   const float mask_all[2] = {-2.0f, -1.0f};
   gpu::Texture *full_tex = GPU_offscreen_color_texture(g_glass.full);
+  /* A see-through window has transparency, keep it. */
+  const GlassBackdropMode mode = WM_window_is_see_through(win) ? GlassBackdropMode::SeeThrough :
+                                                                 GlassBackdropMode::Opaque;
   gpu::Shader *shader = glass_backdrop_shader_bind(
-      rect, full_rect, full_rect, no_tint, params, mask_all);
+      rect, full_rect, full_rect, no_tint, params, mask_all, mode);
   glass_backdrop_draw_quad(shader, full_tex, full_tex);
 
   GPU_blend(old_blend);
@@ -480,11 +509,42 @@ void wm_draw_glass_backdrop(const wmWindow *win, ARegion *region)
   /* Blur radius, grain, saturation boost (vibrancy) and brightness. */
   const float params[4] = {ui::glass_blur_radius(), 0.018f, 1.6f, 1.03f};
 
-  gpu::Shader *shader = glass_backdrop_shader_bind(
-      rect_geom, backdrop_rect, mask_rect, tint, params, GLASS_MASK_THRESHOLD);
+  gpu::Texture *backdrop = GPU_offscreen_color_texture(g_glass.reduced);
+  if (WM_window_is_see_through(win)) {
+    /* The blurred backdrop has transparency (the desktop shows through): clear what it replaces
+     * first, then add it. */
+    gpu::Shader *shader = glass_backdrop_shader_bind(rect_geom,
+                                                     backdrop_rect,
+                                                     mask_rect,
+                                                     tint,
+                                                     params,
+                                                     GLASS_MASK_THRESHOLD,
+                                                     GlassBackdropMode::CoverageMask);
+    GPU_blend(GPU_BLEND_MULTIPLY);
+    glass_backdrop_draw_quad(shader, backdrop, mask);
+    shader = glass_backdrop_shader_bind(rect_geom,
+                                        backdrop_rect,
+                                        mask_rect,
+                                        tint,
+                                        params,
+                                        GLASS_MASK_THRESHOLD,
+                                        GlassBackdropMode::SeeThrough);
+    GPU_blend(GPU_BLEND_ADDITIVE_PREMULT);
+    glass_backdrop_draw_quad(shader, backdrop, mask);
+    GPU_blend(GPU_BLEND_NONE);
+    return;
+  }
+
+  gpu::Shader *shader = glass_backdrop_shader_bind(rect_geom,
+                                                   backdrop_rect,
+                                                   mask_rect,
+                                                   tint,
+                                                   params,
+                                                   GLASS_MASK_THRESHOLD,
+                                                   GlassBackdropMode::Opaque);
 
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);
-  glass_backdrop_draw_quad(shader, GPU_offscreen_color_texture(g_glass.reduced), mask);
+  glass_backdrop_draw_quad(shader, backdrop, mask);
   GPU_blend(GPU_BLEND_NONE);
 }
 
