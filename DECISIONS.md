@@ -351,3 +351,36 @@ that looked squashed instead of being squircles, and windows should show what is
     sequencer timeline are frosted glass instead of opaque. Text editor and console (72%),
     tooltips (78%), asset shelf (50%), channel lists (36%) and frame rulers (40%) are lighter than
     before. The 3D viewport and the sequencer preview stay opaque, their colors must be right.
+
+## macOS window integration (revisits #33, #55, #76)
+
+79. **Traffic lights in the top bar (macOS).** With glass, the main window has no separate title
+    bar: the content fills the window (`NSWindowStyleMaskFullSizeContentView`, hidden title) and
+    the top bar starts right of the window buttons. The empty parts of the top bar move the window
+    and a double-click there zooms or minimizes it, following the system setting. After each
+    redraw Blender tells GHOST where the top bar's buttons are, a click on them is never taken
+    for a drag, and nothing drags while a menu or popup is open. The window keeps its content
+    size when the style changes, so it doesn't grow on every start. Windows without a top bar
+    (preferences, file browser, render) keep their title bar. *Preferences > Interface > Display >
+    Integrated Title Bar* turns it off.
+80. **File, Edit, Render, Window and Help in the macOS menu bar.** The menu bar runs the same
+    operators as the top bar menus (New, Open, Save, Undo, Redo, Render Image, Manual...) through
+    a new GHOST event that names the operator and its properties. They run in the top bar's
+    context, like from the application's own menus. The items have no key equivalents: the
+    shortcuts stay Blender's key map, so nothing changes for them. *About* opens GlassMesh's
+    About dialog and *Preferences…* opens the preferences.
+81. **See-through windows (macOS, experimental, off by default).** *Preferences > Interface >
+    Display > See-Through Windows* shows the real desktop and the applications behind GlassMesh,
+    blurred by the system (`NSVisualEffectView` behind a non-opaque Metal layer, presented with
+    its alpha). The window background is then the "Editor Border" tint instead of the wallpaper,
+    the cards are milky panes, the frosted backdrops of menus keep the transparency, and the 3D
+    viewport (and the other opaque editors) are forced opaque so their colors stay right, see
+    #64. It's off by default because it can't be tested where GlassMesh is developed, and it
+    needs the Metal backend (it does nothing with OpenGL). Windows and Linux keep the wallpaper:
+    DWM backdrops and ARGB windows would each need the same work on those systems, tested there.
+82. **App icon asset catalog (macOS).** The macOS CI build compiles the GlassMesh icon into an
+    asset catalog (`Assets.car`, with Xcode's `actool`) and sets `CFBundleIconName`, as macOS 11
+    and newer prefer. Blender's `Assets.car` and its two legacy `.icns` files (the Blender logo, the
+    second one the `.blend` document icon) were removed from the bundle; `.blend` files get a
+    document icon made by the system from the GlassMesh icon, `glassmesh_icon.icns` is the
+    fallback. If compiling the catalog fails the build goes on with the `.icns` icon.

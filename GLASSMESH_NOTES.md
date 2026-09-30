@@ -204,13 +204,13 @@ macOS 50 min, Windows 128 min). These are the builds to test first. Checked here
   The **Metal** (macOS) and **Vulkan** backends were not tested. The frosted backdrop copies the
   window frame-buffer (`GPU_framebuffer_blit`), and on those backends that path is the first thing
   to check.
-- **See-through to the desktop.** The mockups show the OS desktop behind the Blender window. Blender
-  can't draw into a transparent OS window, so GlassMesh draws its own wallpaper behind the glass.
-  Choosing your desktop wallpaper in *Preferences > Interface > Display > Wallpaper* comes close.
-- **Traffic lights inside the window, and the File/Edit/... menus in the macOS menu bar**, as in the
-  mockups. See DECISIONS.md #55.
-- **macOS 26 Liquid Glass app icon (`Assets.car`).** Compiling an asset catalog needs Xcode. The
-  `.icns` icon is used on all macOS versions.
+- **See-through windows on Windows and Linux.** On macOS, *See-Through Windows* (experimental)
+  shows the real desktop behind GlassMesh, see DECISIONS.md #81. Windows (DWM backdrops) and Linux
+  (ARGB windows and a compositor) keep the wallpaper, choosing your desktop wallpaper in
+  *Preferences > Interface > Display > Wallpaper* comes close.
+- **Test the macOS window integration** (DECISIONS.md #79-82: window buttons in the top bar, the
+  menu bar, see-through windows, the asset catalog icon). It is compiled by the macOS CI build but
+  couldn't be run here.
 - **Packaging templates** for Snap, Flatpak and MSIX (`release/freedesktop/snap`,
   `release/windows/msix`) still describe Blender. They are not used by `make`, only by Blender's
   own release infrastructure.
@@ -269,10 +269,7 @@ These can only be changed by you, on github.com:
 
 ## Possible follow-ups
 
-- macOS: a full-size window with the traffic lights in the top bar, with dragging the window by
-  the top bar's empty space, and the File/Edit/... menus in the native menu bar.
-- Regenerating the macOS `Assets.car` in Xcode from `glassmesh_logo.svg`.
+- A layered Icon Composer (`.icon`) version of the app icon for macOS 26, compiled with Xcode 26.
 - Offering to import settings from a regular Blender installation on first start.
-- The real desktop behind the window (DECISIONS.md #76): a transparent window with the system's
-  own blur (`NSVisualEffectView` on macOS, DWM backdrops on Windows, ARGB + compositor on Linux),
-  the frame drawn with alpha instead of the wallpaper. Needs testing on each system.
+- The real desktop behind the window on Windows (DWM backdrops) and Linux (ARGB window and a
+  compositor), like on macOS (DECISIONS.md #81). Needs testing on each system.

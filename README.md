@@ -14,9 +14,11 @@ GlassMesh is [Blender](https://www.blender.org) 5.2 LTS with a translucent, Appl
 "Liquid Glass" inspired interface: editors are panes of glass floating over a frosted wallpaper,
 with specular rims, light caught in their edges and soft drop shadows, a real background blur
 behind toolbars, headers, menus and popups, larger rounded corners, pill shaped tabs and iOS style
-switches. Windows show the GlassMesh window behind them, frosted. The 3D viewport, image editor
-and node canvas stay opaque and neutral, so colors are seen as they are. Everything else is Blender: the same tools, the same Python API, the same add-ons
-and full `.blend` file compatibility.
+switches. Windows show the GlassMesh window behind them, frosted. The 3D viewport, images and
+the video preview stay opaque and neutral, so colors are seen as they are. On macOS the window
+buttons sit in the top bar, the File, Edit, Render, Window and Help menus are in the menu bar, and
+windows can show the real desktop behind them (experimental). Everything else is Blender: the same
+tools, the same Python API, the same add-ons and full `.blend` file compatibility.
 
 - The glass effect can be switched off in **Preferences > Interface > Display > Glass Effect**
   (the background blur can be switched off separately, for slower graphics cards).
@@ -168,9 +170,11 @@ Linux (x64), macOS (Apple Silicon) and Windows (x64) on GitHub's servers. It run
 to the `glassmesh` branch and on `v*` tags, and can be started by hand from the **Actions** tab
 (*GlassMesh Build > Run workflow*). A build takes a few hours.
 
-The builds are attached to the workflow run as **Artifacts** (kept for 14 days). They are test
-builds and are not code-signed: on macOS, confirm opening the app in
-**System Settings > Privacy & Security**, on Windows click **More info > Run anyway**.
+The builds are attached to the workflow run as **Artifacts** (kept for 7 days), each one inside
+an encrypted 7-Zip archive (AES-256, file names encrypted too). The password is the
+`GLASSMESH_ARCHIVE_PASSWORD` repository secret (*Settings > Secrets and variables > Actions*),
+without it the builds are made but not uploaded. They are not code-signed, see
+[INSTALL.md](docs/glassmesh/INSTALL.md) for installing them.
 
 Project status & documentation
 ------------------------------
