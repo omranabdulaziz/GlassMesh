@@ -2,8 +2,14 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-# Builds GlassMesh test builds for Linux, macOS and Windows, following the build steps in
-# README.md, and uploads them as downloadable artifacts of the workflow run.
+# Builds GlassMesh for Linux, macOS and Windows, following the build steps in README.md, and
+# uploads them as artifacts of the workflow run, encrypted.
+#
+# - The repository is public, so anyone signed in to GitHub can download its artifacts. The builds
+#   are therefore only uploaded inside an AES-256 encrypted 7-Zip archive (file names included),
+#   with the password stored in the repository secret `GLASSMESH_ARCHIVE_PASSWORD`. Without that
+#   secret the builds are checked but not uploaded at all. Secrets are not given to workflows of
+#   pull requests from forks.
 #
 # - Runs on pushes to the `glassmesh` branch (documentation-only changes are skipped), on tags
 #   starting with `v`, and manually from the "Actions" tab ("Run workflow", which GitHub only
@@ -98,13 +104,20 @@ jobs:
           tar -C .. -cf - "${name}" | xz -T0 -6 > "${name}.tar.xz"
           ls -lh "${name}.tar.xz"
 
+      - name: Encrypt
+        id: encrypt
+        env:
+          ARCHIVE_PASSWORD: ${{ secrets.GLASSMESH_ARCHIVE_PASSWORD }}
+        run: bash tools/glassmesh/ci_encrypt.sh glassmesh-*.tar.xz
+
       - name: Upload
+        if: steps.encrypt.outputs.encrypted == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: glassmesh-${{ env.GLASSMESH_VERSION }}-linux-x64
-          path: glassmesh-*.tar.xz
+          path: glassmesh-*.7z
           compression-level: 0
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: error
 
   macos:
@@ -155,13 +168,20 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "${app}" "${name}.zip"
           ls -lh "${name}.zip"
 
+      - name: Encrypt
+        id: encrypt
+        env:
+          ARCHIVE_PASSWORD: ${{ secrets.GLASSMESH_ARCHIVE_PASSWORD }}
+        run: bash tools/glassmesh/ci_encrypt.sh glassmesh-*.zip
+
       - name: Upload
+        if: steps.encrypt.outputs.encrypted == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: glassmesh-${{ env.GLASSMESH_VERSION }}-macos-arm64
-          path: glassmesh-*.zip
+          path: glassmesh-*.7z
           compression-level: 0
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: error
 
   windows:
@@ -202,11 +222,18 @@ jobs:
           7z a -tzip -mx=6 -mmt=on "${name}.zip" "../${name}" > /dev/null
           ls -lh "${name}.zip"
 
+      - name: Encrypt
+        id: encrypt
+        env:
+          ARCHIVE_PASSWORD: ${{ secrets.GLASSMESH_ARCHIVE_PASSWORD }}
+        run: bash tools/glassmesh/ci_encrypt.sh glassmesh-*.zip
+
       - name: Upload
+        if: steps.encrypt.outputs.encrypted == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: glassmesh-${{ env.GLASSMESH_VERSION }}-windows-x64
-          path: glassmesh-*.zip
+          path: glassmesh-*.7z
           compression-level: 0
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: error
