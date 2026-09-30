@@ -130,6 +130,31 @@ class GHOST_WindowWin32 : public GHOST_Window {
    */
   GHOST_TSuccess applyWindowDecorationStyle() override;
 
+  /** \copydoc #GHOST_IWindow::setTitleBarDragArea */
+  void setTitleBarDragArea(int32_t height, const GHOST_Rect *exclude, int32_t exclude_num) override;
+
+  /**
+   * GlassMesh: the window has no system title bar, the application's top bar takes its place
+   * (#GHOST_kDecorationIntegratedTitleBar).
+   */
+  bool isTitleBarIntegrated() const
+  {
+    return titlebar_integrated_;
+  }
+
+  /**
+   * GlassMesh: #WM_NCCALCSIZE with an integrated title bar: the client area takes the place of
+   * the caption. Returns false when the default handling applies.
+   */
+  bool handleIntegratedTitleBarNcCalcSize(WPARAM wParam, LPARAM lParam);
+
+  /**
+   * GlassMesh: #WM_NCHITTEST with an integrated title bar: the top edge resizes the window and
+   * the empty part of the top bar moves it like a caption (with snapping, double-click to
+   * maximize and the window menu).
+   */
+  LRESULT hitTestIntegratedTitleBar(WPARAM wParam, LPARAM lParam);
+
   /**
    * Returns the window rectangle dimensions.
    * The dimensions are given in screen coordinates that are
@@ -412,6 +437,17 @@ class GHOST_WindowWin32 : public GHOST_Window {
   HWND parent_window_hwnd_;
 
   GHOST_DirectManipulationHelper *direct_manipulation_helper_;
+
+  /** GlassMesh: the applied #GHOST_kDecorationIntegratedTitleBar. */
+  bool titlebar_integrated_ = false;
+  /** GlassMesh: the applied #GHOST_kDecorationSeeThrough. */
+  bool see_through_ = false;
+  /** GlassMesh: the drag area of an integrated title bar, see #setTitleBarDragArea. */
+  int32_t titlebar_drag_height_ = 0;
+  std::vector<GHOST_Rect> titlebar_no_drag_;
+
+  /** GlassMesh: the resize frame size at the window's DPI. */
+  void getFrameMetrics(int &r_frame_y, int &r_padding) const;
 
 #ifdef WITH_INPUT_IME
   /** Handle input method editors event */

@@ -2114,6 +2114,7 @@ LRESULT WINAPI GHOST_SystemWin32::s_wndProc(HWND hwnd, uint msg, WPARAM wParam, 
            * within the non-client area of the window. This message is posted to the window that
            * contains the cursor. If a window has captured the mouse, this message is not posted.
            */
+          break;
         }
         case WM_NCHITTEST: {
           /* The WM_NCHITTEST message is sent to a window when the cursor moves, or
@@ -2121,6 +2122,21 @@ LRESULT WINAPI GHOST_SystemWin32::s_wndProc(HWND hwnd, uint msg, WPARAM wParam, 
            * the message is sent to the window beneath the cursor. Otherwise, the message
            * is sent to the window that has captured the mouse.
            */
+          /* GlassMesh: the top bar takes the place of the caption. */
+          if (window->isTitleBarIntegrated()) {
+            lResult = window->hitTestIntegratedTitleBar(wParam, lParam);
+            eventHandled = true;
+          }
+          break;
+        }
+        case WM_NCCALCSIZE: {
+          /* The WM_NCCALCSIZE message is sent when the size and position of a window's client
+           * area must be calculated. GlassMesh: without the caption when the top bar takes its
+           * place. */
+          if (window->handleIntegratedTitleBarNcCalcSize(wParam, lParam)) {
+            lResult = 0;
+            eventHandled = true;
+          }
           break;
         }
         /* ========================

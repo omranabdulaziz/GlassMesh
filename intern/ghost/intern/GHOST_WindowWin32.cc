@@ -394,16 +394,214 @@ GHOST_TSuccess GHOST_WindowWin32::applyWindowDecorationStyle()
   /* DWMWINDOWATTRIBUTE::DWMWA_CAPTION_COLOR */
   constexpr DWORD caption_color_attr = 35;
 
+  GHOST_TSuccess success = GHOST_kSuccess;
   if (window_decoration_style_flags_ & GHOST_kDecorationColoredTitleBar) {
     const float *color = window_decoration_style_settings_.colored_titlebar_bg_color;
     const COLORREF colorref = RGB(
         char(color[0] * 255.0f), char(color[1] * 255.0f), char(color[2] * 255.0f));
     if (!SUCCEEDED(DwmSetWindowAttribute(h_wnd_, caption_color_attr, &colorref, sizeof(colorref))))
     {
-      return GHOST_kFailure;
+      success = GHOST_kFailure;
     }
   }
-  return GHOST_kSuccess;
+
+  /* GlassMesh: no system title bar, the application's top bar takes its place. */
+  const bool integrated = (window_decoration_style_flags_ & GHOST_kDecorationIntegratedTitleBar);
+  if (integrated != titlebar_integrated_) {
+    RECT client_before;
+    ::GetClientRect(h_wnd_, &client_before);
+    titlebar_integrated_ = integrated;
+    ::SetWindowPos(h_wnd_,
+                   nullptr,
+                   0,
+                   0,
+                   0,
+                   0,
+                   SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                       SWP_NOOWNERZORDER);
+    /* Keep the client size: the stored window size is the client size, growing the client area
+     * by the caption would grow the window on every start. */
+    if (getState() == GHOST_kWindowStateNormal) {
+      RECT client_after;
+      ::GetClientRect(h_wnd_, &client_after);
+      const LONG delta = (client_after.bottom - client_after.top) -
+                         (client_before.bottom - client_before.top);
+      if (delta != 0) {
+        RECT win_rect;
+        ::GetWindowRect(h_wnd_, &win_rect);
+        LONG top = win_rect.top + delta;
+        MONITORINFO monitor = {sizeof(MONITORINFO)};
+        if (delta < 0 &&
+            ::GetMonitorInfo(::MonitorFromWindow(h_wnd_, MONITOR_DEFAULTTONEAREST), &monitor) &&
+            top < monitor.rcWork.top)
+        {
+          /* Don't move the caption off the screen, grow downwards instead. */
+          top = win_rect.top;
+        }
+        ::SetWindowPos(h_wnd_,
+                       nullptr,
+                       win_rect.left,
+                       top,
+                       win_rect.right - win_rect.left,
+                       (win_rect.bottom - win_rect.top) - delta,
+                       SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+      }
+    }
+  }
+
+  /* GlassMesh: see-through window: the desktop behind the window shows blurred by the system
+   * where the window has transparency. Needs an OpenGL frame-buffer with alpha. */
+  bool see_through = (window_decoration_style_flags_ & GHOST_kDecorationSeeThrough);
+  if (see_through) {
+    PIXELFORMATDESCRIPTOR pfd = {};
+    const int pixel_format = ::GetPixelFormat(h_DC_);
+    if (getDrawingContextType() != GHOST_kDrawingContextTypeOpenGL || pixel_format == 0 ||
+        ::DescribePixelFormat(h_DC_, pixel_format, sizeof(pfd), &pfd) == 0 || pfd.cAlphaBits == 0)
+    {
+      see_through = false;
+      window_decoration_style_flags_ = GHOST_TWindowDecorationStyleFlags(
+          window_decoration_style_flags_ & ~GHOST_kDecorationSeeThrough);
+    }
+  }
+  if (see_through != see_through_) {
+    see_through_ = see_through;
+    /* Let the compositor use the alpha of the frame-buffer (pre-multiplied): an empty blur
+     * region enables that without the old (Windows 7) blur. */
+    HRGN region = see_through ? ::CreateRectRgn(0, 0, -1, -1) : nullptr;
+    DWM_BLURBEHIND blur_behind = {};
+    blur_behind.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
+    blur_behind.fEnable = see_through;
+    blur_behind.hRgnBlur = region;
+    ::DwmEnableBlurBehindWindow(h_wnd_, &blur_behind);
+    if (region) {
+      ::DeleteObject(region);
+    }
+    const MARGINS margins = see_through ? MARGINS{-1, -1, -1, -1} : MARGINS{0, 0, 0, 0};
+    ::DwmExtendFrameIntoClientArea(h_wnd_, &margins);
+
+    /* The blur: the "acrylic" system backdrop of Windows 11 (22H2 and newer),
+     * DWMWA_SYSTEMBACKDROP_TYPE = 38, DWMSBT_TRANSIENTWINDOW = 3 (DWMSBT_AUTO = 0). */
+    constexpr DWORD system_backdrop_attr = 38;
+    const int backdrop_type = see_through ? 3 : 0;
+    if (!SUCCEEDED(::DwmSetWindowAttribute(
+            h_wnd_, system_backdrop_attr, &backdrop_type, sizeof(backdrop_type))))
+    {
+      /* Windows 10: the blur accent of the window composition attributes. */
+      struct AccentPolicy {
+        int accent_state;
+        int accent_flags;
+        uint32_t gradient_color;
+        int animation_id;
+      };
+      struct WindowCompositionAttribData {
+        int attribute;
+        void *data;
+        SIZE_T data_size;
+      };
+      typedef BOOL(WINAPI * SetWindowCompositionAttributeFn)(HWND,
+                                                              WindowCompositionAttribData *);
+      SetWindowCompositionAttributeFn set_composition_attribute =
+          user32_ ? (SetWindowCompositionAttributeFn)::GetProcAddress(
+                        user32_, "SetWindowCompositionAttribute") :
+                    nullptr;
+      if (set_composition_attribute) {
+        /* ACCENT_ENABLE_BLURBEHIND = 3, ACCENT_DISABLED = 0, WCA_ACCENT_POLICY = 19. */
+        AccentPolicy accent = {see_through ? 3 : 0, 0, 0, 0};
+        WindowCompositionAttribData data = {19, &accent, sizeof(accent)};
+        set_composition_attribute(h_wnd_, &data);
+      }
+    }
+  }
+  return success;
+}
+
+void GHOST_WindowWin32::setTitleBarDragArea(int32_t height,
+                                            const GHOST_Rect *exclude,
+                                            int32_t exclude_num)
+{
+  titlebar_drag_height_ = height;
+  titlebar_no_drag_.assign(exclude, exclude + std::max(exclude_num, 0));
+}
+
+void GHOST_WindowWin32::getFrameMetrics(int &r_frame_y, int &r_padding) const
+{
+  typedef UINT(WINAPI * GetDpiForWindowFn)(HWND);
+  typedef int(WINAPI * GetSystemMetricsForDpiFn)(int, UINT);
+  GetDpiForWindowFn get_dpi_for_window = user32_ ? (GetDpiForWindowFn)::GetProcAddress(
+                                                       user32_, "GetDpiForWindow") :
+                                                   nullptr;
+  GetSystemMetricsForDpiFn get_metrics_for_dpi =
+      user32_ ? (GetSystemMetricsForDpiFn)::GetProcAddress(user32_, "GetSystemMetricsForDpi") :
+                nullptr;
+  if (get_dpi_for_window && get_metrics_for_dpi) {
+    const UINT dpi = get_dpi_for_window(h_wnd_);
+    r_frame_y = get_metrics_for_dpi(SM_CYFRAME, dpi);
+    r_padding = get_metrics_for_dpi(SM_CXPADDEDBORDER, dpi);
+  }
+  else {
+    r_frame_y = ::GetSystemMetrics(SM_CYFRAME);
+    r_padding = ::GetSystemMetrics(SM_CXPADDEDBORDER);
+  }
+}
+
+bool GHOST_WindowWin32::handleIntegratedTitleBarNcCalcSize(WPARAM wParam, LPARAM lParam)
+{
+  if (!titlebar_integrated_ || !wParam || getState() == GHOST_kWindowStateFullScreen) {
+    return false;
+  }
+  NCCALCSIZE_PARAMS *params = reinterpret_cast<NCCALCSIZE_PARAMS *>(lParam);
+  /* The default handling makes room for the resize borders, then the caption is taken back. */
+  const LONG top = params->rgrc[0].top;
+  ::DefWindowProcW(h_wnd_, WM_NCCALCSIZE, wParam, lParam);
+  params->rgrc[0].top = top;
+  if (::IsZoomed(h_wnd_)) {
+    /* A maximized window lies outside of the monitor by its frame. */
+    int frame_y, padding;
+    getFrameMetrics(frame_y, padding);
+    params->rgrc[0].top += frame_y + padding;
+  }
+  return true;
+}
+
+LRESULT GHOST_WindowWin32::hitTestIntegratedTitleBar(WPARAM wParam, LPARAM lParam)
+{
+  /* The borders at the sides and the bottom are the default ones. */
+  const LRESULT hit = ::DefWindowProcW(h_wnd_, WM_NCHITTEST, wParam, lParam);
+  if (hit != HTCLIENT) {
+    return hit;
+  }
+  POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+  ::ScreenToClient(h_wnd_, &point);
+  const GHOST_TWindowState state = getState();
+  if (state == GHOST_kWindowStateFullScreen) {
+    return HTCLIENT;
+  }
+  if (state == GHOST_kWindowStateNormal) {
+    /* The top edge resizes, as the caption's top border did. */
+    int frame_y, padding;
+    getFrameMetrics(frame_y, padding);
+    const int border = frame_y + padding;
+    if (point.y < border) {
+      RECT client;
+      ::GetClientRect(h_wnd_, &client);
+      if (point.x < border) {
+        return HTTOPLEFT;
+      }
+      if (point.x >= client.right - border) {
+        return HTTOPRIGHT;
+      }
+      return HTTOP;
+    }
+  }
+  if (point.y < 0 || point.y >= titlebar_drag_height_) {
+    return HTCLIENT;
+  }
+  for (const GHOST_Rect &rect : titlebar_no_drag_) {
+    if (point.x >= rect.l_ && point.x < rect.r_ && point.y >= rect.t_ && point.y < rect.b_) {
+      return HTCLIENT;
+    }
+  }
+  return HTCAPTION;
 }
 
 void GHOST_WindowWin32::getWindowBounds(GHOST_Rect &bounds) const
@@ -637,9 +835,11 @@ GHOST_Context *GHOST_WindowWin32::newDrawingContext(GHOST_TDrawingContextType ty
 #ifdef WITH_OPENGL_BACKEND
     case GHOST_kDrawingContextTypeOpenGL: {
       for (int minor = 6; minor >= 3; --minor) {
+        /* GlassMesh: a frame-buffer with alpha, for see-through windows (the compositor ignores
+         * it otherwise). */
         GHOST_Context *context = new GHOST_ContextWGL(
             want_context_params_,
-            false,
+            true,
             h_wnd_,
             h_DC_,
             WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
