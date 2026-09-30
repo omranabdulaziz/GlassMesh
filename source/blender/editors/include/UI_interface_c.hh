@@ -1156,6 +1156,11 @@ void region_button_sections_draw(const ARegion *region,
                                  int /*THemeColorID*/ colorid,
                                  ButtonSectionsAlign align);
 bool region_button_sections_is_inside_x(const ARegion *region, const int mval_x);
+/**
+ * GlassMesh: the window space rectangles of the region's interactive buttons (not separators,
+ * spacers or labels), the rest of the region is empty space.
+ */
+void region_button_rects_get(const ARegion *region, Vector<rcti> &r_rects);
 
 /**
  * Automatic aligning, horizontal or vertical.

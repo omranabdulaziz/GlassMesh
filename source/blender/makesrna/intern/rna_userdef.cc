@@ -5617,6 +5617,24 @@ static void rna_def_userdef_view(BlenderRNA *brna)
                            "popups. Disable to improve performance on slower graphics cards");
   RNA_def_property_update(prop, 0, "rna_userdef_update");
 
+  prop = RNA_def_property(srna, "use_glass_integrated_title_bar", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_boolean_negative_sdna(
+      prop, nullptr, "glass_flag", USER_GLASS_NO_INTEGRATED_TITLEBAR);
+  RNA_def_property_ui_text(prop,
+                           "Integrated Title Bar",
+                           "Show the window buttons in the top bar of main windows instead of a "
+                           "separate title bar, drag the window by the empty space of the top bar "
+                           "(macOS)");
+  RNA_def_property_update(prop, 0, "rna_userdef_gpu_update");
+
+  prop = RNA_def_property(srna, "use_glass_see_through", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_boolean_sdna(prop, nullptr, "glass_flag", USER_GLASS_SEE_THROUGH);
+  RNA_def_property_ui_text(prop,
+                           "See-Through Windows",
+                           "Show the desktop and other applications behind the windows, blurred by "
+                           "the system, instead of the wallpaper (macOS, experimental)");
+  RNA_def_property_update(prop, 0, "rna_userdef_gpu_update");
+
   prop = RNA_def_property(srna, "glass_wallpaper", PROP_STRING, PROP_FILEPATH);
   RNA_def_property_string_sdna(prop, nullptr, "glass_wallpaper");
   RNA_def_property_ui_text(prop,

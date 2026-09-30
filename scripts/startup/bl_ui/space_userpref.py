@@ -244,8 +244,14 @@ class USERPREF_PT_interface_display(InterfacePanel, CenterAlignMixIn, Panel):
         sub = col.column(align=True)
         sub.active = view.use_glass_effect
         sub.prop(view, "use_glass_blur", text="Background Blur")
+        import sys
+        if sys.platform == "darwin":
+            sub.prop(view, "use_glass_integrated_title_bar", text="Integrated Title Bar")
+            sub.prop(view, "use_glass_see_through", text="See-Through Windows")
         sub.separator()
-        sub.prop(view, "glass_wallpaper", text="Wallpaper")
+        row = sub.row()
+        row.active = not (sys.platform == "darwin" and view.use_glass_see_through)
+        row.prop(view, "glass_wallpaper", text="Wallpaper")
 
         col.separator()
 

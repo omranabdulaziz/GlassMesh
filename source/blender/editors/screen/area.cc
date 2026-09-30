@@ -3894,7 +3894,16 @@ void ED_region_header_layout(const bContext *C, ARegion *region)
   bool region_layout_based = region->flag & RGN_FLAG_DYNAMIC_SIZE;
   const ScrArea *area = CTX_wm_area(C);
   const bool is_global = area && ELEM(area->spacetype, SPACE_TOPBAR, SPACE_STATUSBAR);
-  const int offset = is_global ? 4.0f * UI_SCALE_FAC : int(UI_HEADER_OFFSET);
+  const int end_offset = is_global ? 4.0f * UI_SCALE_FAC : int(UI_HEADER_OFFSET);
+  int offset = end_offset;
+  /* GlassMesh: leave room for the window buttons when they are in the top bar (macOS). */
+  if (area && area->spacetype == SPACE_TOPBAR) {
+    if (const wmWindow *win = CTX_wm_window(C)) {
+      if (const int inset = WM_window_integrated_titlebar_inset(win)) {
+        offset = std::max(offset, inset - region->winrct.xmin);
+      }
+    }
+  }
 
   /* Height of buttons and scaling needed to achieve it. */
   const int buttony = min_ii(UI_UNIT_Y, region->winy - 2 * UI_SCALE_FAC);
@@ -3947,7 +3956,7 @@ void ED_region_header_layout(const bContext *C, ARegion *region)
     /* for view2d */
     maxco = std::max(co.x, maxco);
 
-    int new_sizex = (maxco + offset) / UI_SCALE_FAC;
+    int new_sizex = (maxco + end_offset) / UI_SCALE_FAC;
 
     if (region_layout_based && (region->sizex != new_sizex)) {
       /* region size is layout based and needs to be updated */
@@ -3965,7 +3974,7 @@ void ED_region_header_layout(const bContext *C, ARegion *region)
   }
 
   if (!region_layout_based) {
-    maxco += offset;
+    maxco += end_offset;
   }
 
   /* Always as last. */

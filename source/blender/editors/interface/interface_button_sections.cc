@@ -301,4 +301,25 @@ bool region_button_sections_is_inside_x(const ARegion *region, const int mval_x)
   return false;
 }
 
+void region_button_rects_get(const ARegion *region, Vector<rcti> &r_rects)
+{
+  for (const Block &block : region->runtime->uiblocks) {
+    for (const Button &but : block.buttons()) {
+      if ((but.flag & (UI_HIDDEN | UI_SCROLLED)) ||
+          ELEM(but.type,
+               ButtonType::Sepr,
+               ButtonType::SeprLine,
+               ButtonType::SeprSpacer,
+               ButtonType::Label))
+      {
+        continue;
+      }
+      rcti rect;
+      button_to_pixelrect(&rect, region, &block, &but);
+      BLI_rcti_translate(&rect, region->winrct.xmin, region->winrct.ymin);
+      r_rects.append(rect);
+    }
+  }
+}
+
 }  // namespace blender::ui

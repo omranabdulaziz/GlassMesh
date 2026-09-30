@@ -202,6 +202,10 @@ enum eUserpref_Glass_Flag : char {
   USER_GLASS_DISABLE = (1 << 0),
   /** Keep translucency but skip the (more expensive) backdrop blur. */
   USER_GLASS_NO_BLUR = (1 << 1),
+  /** macOS: keep the system title bar instead of the window buttons in the top bar. */
+  USER_GLASS_NO_INTEGRATED_TITLEBAR = (1 << 2),
+  /** macOS: see-through windows showing the desktop, blurred by the system (experimental). */
+  USER_GLASS_SEE_THROUGH = (1 << 3),
 };
 ENUM_OPERATORS(eUserpref_Glass_Flag)
 

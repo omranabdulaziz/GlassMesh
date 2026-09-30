@@ -813,6 +813,12 @@ eWM_WindowDecorationStyleFlag WM_window_decoration_style_flags_get(const wmWindo
   if (ghost_style_flags & GHOST_kDecorationColoredTitleBar) {
     wm_style_flags |= WM_WINDOW_DECORATION_STYLE_COLORED_TITLEBAR;
   }
+  if (ghost_style_flags & GHOST_kDecorationIntegratedTitleBar) {
+    wm_style_flags |= WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR;
+  }
+  if (ghost_style_flags & GHOST_kDecorationSeeThrough) {
+    wm_style_flags |= WM_WINDOW_DECORATION_STYLE_SEE_THROUGH;
+  }
 
   return wm_style_flags;
 }
@@ -825,6 +831,12 @@ void WM_window_decoration_style_flags_set(const wmWindow *win,
 
   if (style_flags & WM_WINDOW_DECORATION_STYLE_COLORED_TITLEBAR) {
     ghost_style_flags |= GHOST_kDecorationColoredTitleBar;
+  }
+  if (style_flags & WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR) {
+    ghost_style_flags |= GHOST_kDecorationIntegratedTitleBar;
+  }
+  if (style_flags & WM_WINDOW_DECORATION_STYLE_SEE_THROUGH) {
+    ghost_style_flags |= GHOST_kDecorationSeeThrough;
   }
 
   GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
@@ -869,13 +881,142 @@ static void wm_window_decoration_style_set_from_theme(const wmWindow *win, const
   ghost_window->setWindowDecorationStyleSettings(decoration_settings);
 }
 
+/** GlassMesh: the top bar of the window, when it shows one. */
+static const ScrArea *wm_window_topbar_area_visible(const wmWindow *win)
+{
+  if (!WM_window_is_main_top_level(win)) {
+    return nullptr;
+  }
+  for (const ScrArea &area : win->global_areas.areabase) {
+    if (area.spacetype == SPACE_TOPBAR && !(area.global->flag & GLOBAL_AREA_IS_HIDDEN)) {
+      return &area;
+    }
+  }
+  return nullptr;
+}
+
+/** GlassMesh: the decoration styles the glass preferences ask for (macOS only). */
+static eWM_WindowDecorationStyleFlag wm_window_glass_decoration_flags(const wmWindow *win)
+{
+  eWM_WindowDecorationStyleFlag flags = WM_WINDOW_DECORATION_STYLE_NONE;
+#ifdef __APPLE__
+  if (!ui::glass_enabled()) {
+    return flags;
+  }
+  /* Only windows with a top bar can hold the window buttons. */
+  if (!(U.glass_flag & USER_GLASS_NO_INTEGRATED_TITLEBAR) && wm_window_topbar_area_visible(win)) {
+    flags |= WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR;
+  }
+  if (U.glass_flag & USER_GLASS_SEE_THROUGH) {
+    flags |= WM_WINDOW_DECORATION_STYLE_SEE_THROUGH;
+  }
+#else
+  UNUSED_VARS(win);
+#endif
+  return flags;
+}
+
 void WM_window_decoration_style_apply(const wmWindow *win, const bScreen *screen)
 {
   BLI_assert(WM_capabilities_flag() & WM_CAPABILITY_WINDOW_DECORATION_STYLES);
   wm_window_decoration_style_set_from_theme(win, screen);
 
+  /* GlassMesh: the glass styles follow the preferences. */
+  const eWM_WindowDecorationStyleFlag glass_flags =
+      WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR | WM_WINDOW_DECORATION_STYLE_SEE_THROUGH;
+  WM_window_decoration_style_flags_set(
+      win,
+      (WM_window_decoration_style_flags_get(win) & ~glass_flags) |
+          wm_window_glass_decoration_flags(win));
+
   GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
   ghost_window->applyWindowDecorationStyle();
+}
+
+bool WM_window_is_see_through(const wmWindow *win)
+{
+#ifdef __APPLE__
+  if (win->runtime->ghostwin == nullptr ||
+      !(WM_capabilities_flag() & WM_CAPABILITY_WINDOW_DECORATION_STYLES))
+  {
+    return false;
+  }
+  return WM_window_decoration_style_flags_get(win) & WM_WINDOW_DECORATION_STYLE_SEE_THROUGH;
+#else
+  UNUSED_VARS(win);
+  return false;
+#endif
+}
+
+int WM_window_integrated_titlebar_inset(const wmWindow *win)
+{
+#ifdef __APPLE__
+  GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
+  if (ghost_window == nullptr) {
+    return 0;
+  }
+  const int32_t inset = ghost_window->getIntegratedTitleBarInset();
+  if (inset <= 0) {
+    return 0;
+  }
+  return int(std::ceil(float(inset) * ghost_window->getNativePixelSize()));
+#else
+  UNUSED_VARS(win);
+  return 0;
+#endif
+}
+
+void WM_window_titlebar_drag_area_update(wmWindow *win)
+{
+#ifdef __APPLE__
+  GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
+  if (ghost_window == nullptr ||
+      !(WM_capabilities_flag() & WM_CAPABILITY_WINDOW_DECORATION_STYLES))
+  {
+    return;
+  }
+
+  const bScreen *screen = WM_window_get_active_screen(win);
+  const bool integrated = WM_window_decoration_style_flags_get(win) &
+                          WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR;
+  const bool integrated_wanted = wm_window_glass_decoration_flags(win) &
+                                 WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR;
+  if (integrated != integrated_wanted) {
+    /* The top bar was shown or hidden (e.g. full-screen area): move the window buttons. */
+    WM_window_decoration_style_apply(win, screen);
+  }
+
+  const ScrArea *topbar = wm_window_topbar_area_visible(win);
+  /* Nothing moves the window while a menu or popup is open: a click closes it. */
+  if (!integrated_wanted || topbar == nullptr ||
+      (screen && !BLI_listbase_is_empty(&screen->regionbase)))
+  {
+    ghost_window->setTitleBarDragArea(0, nullptr, 0);
+    return;
+  }
+
+  /* From window pixels (from the bottom left) to client coordinates (from the top left). */
+  const float fac = ghost_window->getNativePixelSize();
+  const int win_height = WM_window_native_pixel_y(win);
+  const int pad = int(2.0f * fac);
+  Vector<GHOST_Rect> exclude;
+  Vector<rcti> button_rects;
+  for (const ARegion &region : topbar->regionbase) {
+    if (region.runtime->visible) {
+      ui::region_button_rects_get(&region, button_rects);
+    }
+  }
+  for (const rcti &rect : button_rects) {
+    exclude.append(GHOST_Rect(int32_t((rect.xmin - pad) / fac),
+                              int32_t((win_height - rect.ymax - pad) / fac),
+                              int32_t(std::ceil((rect.xmax + pad) / fac)),
+                              int32_t(std::ceil((win_height - rect.ymin + pad) / fac))));
+  }
+  const int32_t height = int32_t((win_height - topbar->totrct.ymin) / fac);
+  ghost_window->setTitleBarDragArea(height, exclude.data(), int32_t(exclude.size()));
+#else
+  UNUSED_VARS(win);
+#endif
 }
 
 /**
@@ -1767,6 +1908,78 @@ static void ghost_event_proc_timestamp_warning(const GHOST_IEvent *ghost_event)
 #endif /* !NDEBUG */
 
 /**
+ * GlassMesh: run an operator chosen in the native menu bar, `IDNAME` or
+ * `IDNAME;property=value;...` (boolean, integer, enum and string properties). It runs in the
+ * context of the top bar when the window has one, like from the application's own menus.
+ */
+static void wm_window_native_menu_operator_call(bContext *C, wmWindow *win, const StringRef str)
+{
+  Vector<StringRef> parts;
+  for (int64_t start = 0; start <= str.size();) {
+    int64_t end = str.find(';', start);
+    if (end == StringRef::not_found) {
+      end = str.size();
+    }
+    parts.append(str.substr(start, end - start));
+    start = end + 1;
+  }
+  if (parts.is_empty() || parts[0].is_empty()) {
+    return;
+  }
+  wmOperatorType *ot = WM_operatortype_find(std::string(parts[0]).c_str(), false);
+  if (ot == nullptr) {
+    return;
+  }
+
+  CTX_wm_window_set(C, win);
+  if (const ScrArea *topbar = wm_window_topbar_area_visible(win)) {
+    ScrArea *area = const_cast<ScrArea *>(topbar);
+    CTX_wm_area_set(C, area);
+    CTX_wm_region_set(C, BKE_area_find_region_type(area, RGN_TYPE_HEADER));
+  }
+
+  PointerRNA props_ptr = WM_operator_properties_create_ptr(ot);
+  for (const StringRef part : parts.as_span().drop_front(1)) {
+    const int64_t eq = part.find('=');
+    if (eq == StringRef::not_found) {
+      continue;
+    }
+    const std::string name = part.substr(0, eq);
+    const std::string value = part.drop_prefix(eq + 1);
+    PropertyRNA *prop = RNA_struct_find_property(&props_ptr, name.c_str());
+    if (prop == nullptr) {
+      continue;
+    }
+    switch (RNA_property_type(prop)) {
+      case PROP_BOOLEAN:
+        RNA_property_boolean_set(&props_ptr, prop, ELEM(value, "1", "true", "True"));
+        break;
+      case PROP_INT:
+        RNA_property_int_set(&props_ptr, prop, std::atoi(value.c_str()));
+        break;
+      case PROP_ENUM: {
+        int enum_value;
+        if (RNA_property_enum_value(C, &props_ptr, prop, value.c_str(), &enum_value)) {
+          RNA_property_enum_set(&props_ptr, prop, enum_value);
+        }
+        break;
+      }
+      case PROP_STRING:
+        RNA_property_string_set(&props_ptr, prop, value.c_str());
+        break;
+      default:
+        break;
+    }
+  }
+  WM_operator_name_call_ptr(C, ot, wm::OpCallContext::InvokeDefault, &props_ptr, nullptr);
+  WM_operator_properties_free(&props_ptr);
+
+  CTX_wm_region_set(C, nullptr);
+  CTX_wm_area_set(C, nullptr);
+  CTX_wm_window_set(C, nullptr);
+}
+
+/**
  * Called by ghost, here we handle events for windows themselves or send to event system.
  *
  * Mouse coordinate conversion happens here.
@@ -1998,6 +2211,12 @@ static bool ghost_event_proc(const GHOST_IEvent *ghost_event, GHOST_TUserDataPtr
         WM_operator_properties_free(&props_ptr);
 
         CTX_wm_window_set(C, nullptr);
+      }
+      break;
+    }
+    case GHOST_kEventNativeMenuOperator: {
+      if (const char *str = static_cast<const char *>(data)) {
+        wm_window_native_menu_operator_call(C, win, str);
       }
       break;
     }

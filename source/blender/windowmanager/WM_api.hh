@@ -469,6 +469,10 @@ enum eWM_WindowDecorationStyleFlag {
   WM_WINDOW_DECORATION_STYLE_NONE = 0,
   /** Colored TitleBar. */
   WM_WINDOW_DECORATION_STYLE_COLORED_TITLEBAR = (1 << 0),
+  /** GlassMesh: the window buttons are in the top bar, which moves the window (macOS). */
+  WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR = (1 << 1),
+  /** GlassMesh: the desktop shows (blurred) through the window background (macOS). */
+  WM_WINDOW_DECORATION_STYLE_SEE_THROUGH = (1 << 2),
 };
 ENUM_OPERATORS(eWM_WindowDecorationStyleFlag)
 
@@ -491,6 +495,21 @@ void WM_window_decoration_style_flags_set(const wmWindow *win,
  * notification when #WM_CAPABILITY_WINDOW_DECORATION_STYLES is supported instead.
  */
 void WM_window_decoration_style_apply(const wmWindow *win, const bScreen *screen = nullptr);
+/**
+ * GlassMesh: whether the window background is see-through (the system blurs the desktop behind
+ * it), the window is drawn with transparency then.
+ */
+bool WM_window_is_see_through(const wmWindow *win);
+/**
+ * GlassMesh: the width (in window pixels) the window buttons take at the left of the top bar when
+ * they are integrated in it, 0 otherwise.
+ */
+int WM_window_integrated_titlebar_inset(const wmWindow *win);
+/**
+ * GlassMesh: tell the system which part of the window moves it: the empty part of the top bar
+ * when the window buttons are integrated in it. Call after drawing the window.
+ */
+void WM_window_titlebar_drag_area_update(wmWindow *win);
 
 /* `wm_files.cc`. */
 
