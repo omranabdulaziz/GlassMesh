@@ -38,8 +38,12 @@ if [ -z "${sevenzip}" ]; then
   exit 1
 fi
 
+# `glassmesh-<version>-<platform>-<commit>.7z`, holding the `.zip` or `.tar.xz` package.
+archive="${package%.zip}"
+archive="${archive%.tar.xz}.7z"
+
 # The package is already compressed: store it (-mx=0), encrypt data and headers (-mhe=on).
-"${sevenzip}" a -t7z -mx=0 -mhe=on "-p${ARCHIVE_PASSWORD}" "${package%.*}.7z" "${package}" > /dev/null
+"${sevenzip}" a -t7z -mx=0 -mhe=on "-p${ARCHIVE_PASSWORD}" "${archive}" "${package}" > /dev/null
 rm -f "${package}"
-ls -lh "${package%.*}.7z"
+ls -lh "${archive}"
 echo "encrypted=true" >> "${out}"
