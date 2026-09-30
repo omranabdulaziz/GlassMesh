@@ -204,13 +204,11 @@ macOS 50 min, Windows 128 min). These are the builds to test first. Checked here
   The **Metal** (macOS) and **Vulkan** backends were not tested. The frosted backdrop copies the
   window frame-buffer (`GPU_framebuffer_blit`), and on those backends that path is the first thing
   to check.
-- **See-through windows on Windows and Linux.** On macOS, *See-Through Windows* (experimental)
-  shows the real desktop behind GlassMesh, see DECISIONS.md #81. Windows (DWM backdrops) and Linux
-  (ARGB windows and a compositor) keep the wallpaper, choosing your desktop wallpaper in
-  *Preferences > Interface > Display > Wallpaper* comes close.
-- **Test the macOS window integration** (DECISIONS.md #79-82: window buttons in the top bar, the
-  menu bar, see-through windows, the asset catalog icon). It is compiled by the macOS CI build but
-  couldn't be run here.
+- **Test the window integration on each system** (DECISIONS.md #79-85: window buttons in the top
+  bar, the macOS menu bar, see-through windows, the asset catalog icon). It is compiled by the
+  CI builds, the Linux Wayland parts were run in Weston, but none of it could be run on a Mac,
+  on Windows, or with the KDE and GNOME compositors here.
+- **X11 on Linux** keeps the window manager's title bar and the wallpaper.
 - **Packaging templates** for Snap, Flatpak and MSIX (`release/freedesktop/snap`,
   `release/windows/msix`) still describe Blender. They are not used by `make`, only by Blender's
   own release infrastructure.
@@ -271,5 +269,5 @@ These can only be changed by you, on github.com:
 
 - A layered Icon Composer (`.icon`) version of the app icon for macOS 26, compiled with Xcode 26.
 - Offering to import settings from a regular Blender installation on first start.
-- The real desktop behind the window on Windows (DWM backdrops) and Linux (ARGB window and a
-  compositor), like on macOS (DECISIONS.md #81). Needs testing on each system.
+- See-through windows with Vulkan (the swap chain's composite alpha) and on X11 (an ARGB
+  visual, and KDE's blur hint).

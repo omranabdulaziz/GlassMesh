@@ -15,10 +15,11 @@ GlassMesh is [Blender](https://www.blender.org) 5.2 LTS with a translucent, Appl
 with specular rims, light caught in their edges and soft drop shadows, a real background blur
 behind toolbars, headers, menus and popups, larger rounded corners, pill shaped tabs and iOS style
 switches. Windows show the GlassMesh window behind them, frosted. The 3D viewport, images and
-the video preview stay opaque and neutral, so colors are seen as they are. On macOS the window
-buttons sit in the top bar, the File, Edit, Render, Window and Help menus are in the menu bar, and
-windows can show the real desktop behind them (experimental). Everything else is Blender: the same
-tools, the same Python API, the same add-ons and full `.blend` file compatibility.
+the video preview stay opaque and neutral, so colors are seen as they are. The window buttons sit
+in the top bar (macOS, Windows, and GNOME on Linux), the File, Edit, Render, Window and Help menus
+are also in the macOS menu bar, and windows can show the real desktop behind them, blurred by the
+system (experimental: macOS, Windows, KDE Plasma). Everything else is Blender: the same tools, the
+same Python API, the same add-ons and full `.blend` file compatibility.
 
 - The glass effect can be switched off in **Preferences > Interface > Display > Glass Effect**
   (the background blur can be switched off separately, for slower graphics cards).
