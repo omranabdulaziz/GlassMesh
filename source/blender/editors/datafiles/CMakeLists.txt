@@ -962,6 +962,10 @@ if(WITH_BLENDER)
       vpaint_hlt
       warning_large
       window
+      window_close
+      window_maximize
+      window_minimize
+      window_restore
       wordwrap_off
       wordwrap_on
       workspace

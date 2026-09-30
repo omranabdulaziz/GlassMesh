@@ -134,6 +134,11 @@ void WM_window_csd_draw_titlebar_ex(const int win_size[2],
     std::swap(elem->bounds[1][0], elem->bounds[1][1]);
   }
 
+  /* GlassMesh: no title bar, the application's top bar takes its place (only the border). */
+  if (csd_layout && csd_layout->titlebar_integrated) {
+    return;
+  }
+
   BLI_assert(csd_elems[GHOST_kCSDTypeTitlebar].type == GHOST_kCSDTypeTitlebar);
   const rcti title_rect = {
       /*xmin*/ csd_elems[GHOST_kCSDTypeTitlebar].bounds[0][0],
@@ -279,7 +284,8 @@ void WM_window_csd_draw_titlebar(const wmWindow *win)
 {
   BLI_assert(WM_window_is_csd(win));
   const int2 win_size = WM_window_native_pixel_size(win);
-  const GHOST_CSD_Layout *csd_layout = WM_window_csd_layout_get();
+  const GHOST_CSD_Layout csd_layout_win = WM_window_csd_layout_for_window(win);
+  const GHOST_CSD_Layout *csd_layout = &csd_layout_win;
   GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
   const uint16_t dpi = ghost_window->getDPIHint();
   const char win_state = GHOST_TWindowState(win->windowstate);

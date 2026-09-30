@@ -895,24 +895,40 @@ static const ScrArea *wm_window_topbar_area_visible(const wmWindow *win)
   return nullptr;
 }
 
-/** GlassMesh: the decoration styles the glass preferences ask for (macOS only). */
+/**
+ * GlassMesh: the system supports the glass decoration styles: macOS, Windows and Linux with
+ * Wayland (where the compositor or our own decorations allow it, the window reports back what it
+ * applied). X11 keeps the window manager's title bar and the wallpaper.
+ */
+static bool wm_window_glass_decoration_supported()
+{
+#if defined(__APPLE__) || defined(WIN32)
+  return true;
+#else
+  return STREQ(WM_ghost_backend(), "WAYLAND");
+#endif
+}
+
+/** GlassMesh: the decoration styles the glass preferences ask for. */
 static eWM_WindowDecorationStyleFlag wm_window_glass_decoration_flags(const wmWindow *win)
 {
   eWM_WindowDecorationStyleFlag flags = WM_WINDOW_DECORATION_STYLE_NONE;
-#ifdef __APPLE__
-  if (!ui::glass_enabled()) {
+  if (!ui::glass_enabled() || !wm_window_glass_decoration_supported()) {
     return flags;
   }
-  /* Only windows with a top bar can hold the window buttons. */
+  /* Only windows with a top bar can hold the window buttons. On Linux only in place of our own
+   * title bar (GNOME), the compositor draws the title bar otherwise. */
   if (!(U.glass_flag & USER_GLASS_NO_INTEGRATED_TITLEBAR) && wm_window_topbar_area_visible(win)) {
-    flags |= WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR;
+#if !(defined(__APPLE__) || defined(WIN32))
+    if (WM_window_is_csd(win))
+#endif
+    {
+      flags |= WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR;
+    }
   }
   if (U.glass_flag & USER_GLASS_SEE_THROUGH) {
     flags |= WM_WINDOW_DECORATION_STYLE_SEE_THROUGH;
   }
-#else
-  UNUSED_VARS(win);
-#endif
   return flags;
 }
 
@@ -935,17 +951,12 @@ void WM_window_decoration_style_apply(const wmWindow *win, const bScreen *screen
 
 bool WM_window_is_see_through(const wmWindow *win)
 {
-#ifdef __APPLE__
-  if (win->runtime->ghostwin == nullptr ||
+  if (win->runtime->ghostwin == nullptr || !wm_window_glass_decoration_supported() ||
       !(WM_capabilities_flag() & WM_CAPABILITY_WINDOW_DECORATION_STYLES))
   {
     return false;
   }
   return WM_window_decoration_style_flags_get(win) & WM_WINDOW_DECORATION_STYLE_SEE_THROUGH;
-#else
-  UNUSED_VARS(win);
-  return false;
-#endif
 }
 
 int WM_window_integrated_titlebar_inset(const wmWindow *win)
@@ -966,11 +977,27 @@ int WM_window_integrated_titlebar_inset(const wmWindow *win)
 #endif
 }
 
-void WM_window_titlebar_drag_area_update(wmWindow *win)
+bool WM_window_titlebar_buttons_drawn(const wmWindow *win)
 {
 #ifdef __APPLE__
+  /* The system draws the window buttons, in the space left for them. */
+  UNUSED_VARS(win);
+  return false;
+#else
+  if (win->runtime->ghostwin == nullptr || !wm_window_glass_decoration_supported() ||
+      !(WM_capabilities_flag() & WM_CAPABILITY_WINDOW_DECORATION_STYLES))
+  {
+    return false;
+  }
+  return WM_window_decoration_style_flags_get(win) &
+         WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR;
+#endif
+}
+
+void WM_window_titlebar_drag_area_update(wmWindow *win)
+{
   GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
-  if (ghost_window == nullptr ||
+  if (ghost_window == nullptr || !wm_window_glass_decoration_supported() ||
       !(WM_capabilities_flag() & WM_CAPABILITY_WINDOW_DECORATION_STYLES))
   {
     return;
@@ -1014,9 +1041,6 @@ void WM_window_titlebar_drag_area_update(wmWindow *win)
   }
   const int32_t height = int32_t((win_height - topbar->totrct.ymin) / fac);
   ghost_window->setTitleBarDragArea(height, exclude.data(), int32_t(exclude.size()));
-#else
-  UNUSED_VARS(win);
-#endif
 }
 
 /**
@@ -1156,6 +1180,11 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
 
   if (G.debug & G_DEBUG_GPU) {
     gpu_settings.flags |= GHOST_gpuDebugContext;
+  }
+  /* GlassMesh: see-through windows need a frame-buffer with alpha (Wayland, decided when the
+   * window is created). */
+  if (ui::glass_enabled() && (U.glass_flag & USER_GLASS_SEE_THROUGH)) {
+    gpu_settings.flags |= GHOST_gpuAlphaBackground;
   }
 
   GPUBackendType gpu_backend = GPU_backend_type_selection_get();
@@ -1696,6 +1725,28 @@ wmOperatorStatus wm_window_fullscreen_toggle_exec(bContext *C, wmOperator * /*op
     ghost_window->setState(GHOST_kWindowStateNormal);
   }
 
+  return OPERATOR_FINISHED;
+}
+
+wmOperatorStatus wm_window_minimize_exec(bContext *C, wmOperator * /*op*/)
+{
+  if (G.background) {
+    return OPERATOR_CANCELLED;
+  }
+  GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(CTX_wm_window(C)->runtime->ghostwin);
+  ghost_window->setState(GHOST_kWindowStateMinimized);
+  return OPERATOR_FINISHED;
+}
+
+wmOperatorStatus wm_window_maximize_toggle_exec(bContext *C, wmOperator * /*op*/)
+{
+  if (G.background) {
+    return OPERATOR_CANCELLED;
+  }
+  GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(CTX_wm_window(C)->runtime->ghostwin);
+  ghost_window->setState(ghost_window->getState() == GHOST_kWindowStateMaximized ?
+                             GHOST_kWindowStateNormal :
+                             GHOST_kWindowStateMaximized);
   return OPERATOR_FINISHED;
 }
 

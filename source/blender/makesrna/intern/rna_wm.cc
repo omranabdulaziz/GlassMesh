@@ -1068,6 +1068,24 @@ static bool rna_Window_support_hdr_color_get(PointerRNA *ptr)
   return WM_window_support_hdr_color(win);
 }
 
+static bool rna_Window_show_window_buttons_get(PointerRNA *ptr)
+{
+  wmWindow *win = static_cast<wmWindow *>(ptr->data);
+  return WM_window_titlebar_buttons_drawn(win);
+}
+
+static bool rna_Window_is_see_through_get(PointerRNA *ptr)
+{
+  wmWindow *win = static_cast<wmWindow *>(ptr->data);
+  return WM_window_is_see_through(win);
+}
+
+static bool rna_Window_is_maximized_get(PointerRNA *ptr)
+{
+  wmWindow *win = static_cast<wmWindow *>(ptr->data);
+  return WM_window_is_maximized(win);
+}
+
 static bool rna_Window_modal_handler_skip(CollectionPropertyIterator * /*iter*/, void *data)
 {
   const wmEventHandler_Op *handler = static_cast<wmEventHandler_Op *>(data);
@@ -2853,6 +2871,26 @@ static void rna_def_window(BlenderRNA *brna)
                            "The window has a HDR graphics buffer that wide gamut and high dynamic "
                            "range colors can be written to, in extended sRGB color space.");
   RNA_def_property_boolean_funcs(prop, "rna_Window_support_hdr_color_get", nullptr);
+
+  /* GlassMesh. */
+  prop = RNA_def_property(srna, "show_window_buttons", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+  RNA_def_property_boolean_funcs(prop, "rna_Window_show_window_buttons_get", nullptr);
+  RNA_def_property_ui_text(
+      prop,
+      "Show Window Buttons",
+      "The window has no title bar, its minimize, maximize and close buttons are in the top bar");
+
+  prop = RNA_def_property(srna, "is_maximized", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+  RNA_def_property_boolean_funcs(prop, "rna_Window_is_maximized_get", nullptr);
+  RNA_def_property_ui_text(prop, "Is Maximized", "The window is maximized");
+
+  prop = RNA_def_property(srna, "is_see_through", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+  RNA_def_property_boolean_funcs(prop, "rna_Window_is_see_through_get", nullptr);
+  RNA_def_property_ui_text(
+      prop, "Is See-Through", "The desktop shows through the window, blurred by the system");
 
   prop = RNA_def_property(srna, "modal_operators", PROP_COLLECTION, PROP_NONE);
   RNA_def_property_struct_type(prop, "Operator");

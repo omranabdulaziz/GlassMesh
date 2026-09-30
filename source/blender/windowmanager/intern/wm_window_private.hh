@@ -83,5 +83,9 @@ int WM_window_csd_layout_callback(const int window_size[2],
                                   GHOST_CSD_Elem *csd_elems);
 
 const GHOST_CSD_Layout *WM_window_csd_layout_get();
+/**
+ * GlassMesh: the CSD layout of \a win (without a title bar when the top bar takes its place).
+ */
+GHOST_CSD_Layout WM_window_csd_layout_for_window(const wmWindow *win);
 
 }  // namespace blender

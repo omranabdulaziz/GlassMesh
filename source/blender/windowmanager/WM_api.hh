@@ -506,6 +506,11 @@ bool WM_window_is_see_through(const wmWindow *win);
  */
 int WM_window_integrated_titlebar_inset(const wmWindow *win);
 /**
+ * GlassMesh: the top bar shows minimize, maximize and close buttons: the title bar is integrated
+ * in it and the system doesn't draw them there (Windows).
+ */
+bool WM_window_titlebar_buttons_drawn(const wmWindow *win);
+/**
  * GlassMesh: tell the system which part of the window moves it: the empty part of the top bar
  * when the window buttons are integrated in it. Call after drawing the window.
  */

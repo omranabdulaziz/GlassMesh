@@ -70,6 +70,18 @@ class TOPBAR_HT_upper_bar(Header):
             unlink="scene.view_layer_remove",
         )
 
+        # GlassMesh: the window buttons, when the top bar takes the place of the title bar.
+        if window.show_window_buttons:
+            layout.separator()
+            row = layout.row(align=True)
+            row.scale_x = 1.5
+            row.operator("wm.window_minimize", text="", icon='WINDOW_MINIMIZE', emboss=False)
+            row.operator(
+                "wm.window_maximize_toggle", text="",
+                icon='WINDOW_RESTORE' if window.is_maximized else 'WINDOW_MAXIMIZE', emboss=False,
+            )
+            row.operator("wm.window_close", text="", icon='WINDOW_CLOSE', emboss=False)
+
 
 class TOPBAR_PT_tool_settings_extra(Panel):
     """

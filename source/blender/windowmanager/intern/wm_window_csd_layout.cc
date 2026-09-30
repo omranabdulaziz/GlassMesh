@@ -39,7 +39,11 @@ int WM_window_csd_layout_callback(const int window_size[2],
   constexpr int csd_border_size = 5;
   constexpr int csd_border_corner_size = csd_title_height + csd_border_size;
 
-  const int title = WM_window_csd_fracitonal_scale_apply(csd_title_height, fractional_scale);
+  /* GlassMesh: without a title bar the top bar takes its place (with the window buttons). */
+  const bool titlebar_integrated = csd_layout && csd_layout->titlebar_integrated;
+  const int title = titlebar_integrated ?
+                        0 :
+                        WM_window_csd_fracitonal_scale_apply(csd_title_height, fractional_scale);
 
   /* The caller is expected not to run the callback for full screen windows. */
   BLI_assert(window_state != GHOST_kWindowStateFullScreen);
@@ -61,7 +65,7 @@ int WM_window_csd_layout_callback(const int window_size[2],
 
   /* Allow this to be null for callers that only need to know about
    * the "title" & "body" regions. */
-  if (csd_layout != nullptr) {
+  if (csd_layout != nullptr && !titlebar_integrated) {
     int button_layout_title_index = 0;
 
     /* Buttons on the left. */
@@ -102,12 +106,14 @@ int WM_window_csd_layout_callback(const int window_size[2],
   }
 
   /* Title bar. */
-  elem = &csd_elems[decor_num++];
-  elem->type = GHOST_kCSDTypeTitlebar;
-  elem->bounds[0][0] = border;
-  elem->bounds[0][1] = window_size[0] - border;
-  elem->bounds[1][0] = border;
-  elem->bounds[1][1] = border + title;
+  if (!titlebar_integrated) {
+    elem = &csd_elems[decor_num++];
+    elem->type = GHOST_kCSDTypeTitlebar;
+    elem->bounds[0][0] = border;
+    elem->bounds[0][1] = window_size[0] - border;
+    elem->bounds[1][0] = border;
+    elem->bounds[1][1] = border + title;
+  }
 
   if (window_state != GHOST_kWindowStateMaximized) {
     const int32_t border_corner = WM_window_csd_fracitonal_scale_apply(csd_border_corner_size,
@@ -175,9 +181,20 @@ int WM_window_csd_layout_callback(const int window_size[2],
   return decor_num;
 }
 
+GHOST_CSD_Layout WM_window_csd_layout_for_window(const wmWindow *win)
+{
+  GHOST_CSD_Layout csd_layout = *WM_window_csd_layout_get();
+  csd_layout.titlebar_integrated = (WM_capabilities_flag() &
+                                    WM_CAPABILITY_WINDOW_DECORATION_STYLES) &&
+                                   (WM_window_decoration_style_flags_get(win) &
+                                    WM_WINDOW_DECORATION_STYLE_INTEGRATED_TITLEBAR);
+  return csd_layout;
+}
+
 void WM_window_csd_rect_calc(const wmWindow *win, rcti *r_rect)
 {
-  const GHOST_CSD_Layout *csd_layout = WM_window_csd_layout_get();
+  const GHOST_CSD_Layout csd_layout_win = WM_window_csd_layout_for_window(win);
+  const GHOST_CSD_Layout *csd_layout = &csd_layout_win;
   GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
   const int fractional_scale[2] = {GHOST_CSD_DPI_FRACTIONAL_BASE, ghost_window->getDPIHint()};
 

@@ -5624,7 +5624,7 @@ static void rna_def_userdef_view(BlenderRNA *brna)
                            "Integrated Title Bar",
                            "Show the window buttons in the top bar of main windows instead of a "
                            "separate title bar, drag the window by the empty space of the top bar "
-                           "(macOS)");
+                           "(macOS, Windows, and Linux on GNOME with Wayland)");
   RNA_def_property_update(prop, 0, "rna_userdef_gpu_update");
 
   prop = RNA_def_property(srna, "use_glass_see_through", PROP_BOOLEAN, PROP_NONE);
@@ -5632,7 +5632,9 @@ static void rna_def_userdef_view(BlenderRNA *brna)
   RNA_def_property_ui_text(prop,
                            "See-Through Windows",
                            "Show the desktop and other applications behind the windows, blurred by "
-                           "the system, instead of the wallpaper (macOS, experimental)");
+                           "the system, instead of the wallpaper (experimental). macOS, Windows, "
+                           "and Linux with Wayland on desktops that blur (KDE Plasma), where it "
+                           "applies to windows opened after enabling it");
   RNA_def_property_update(prop, 0, "rna_userdef_gpu_update");
 
   prop = RNA_def_property(srna, "glass_wallpaper", PROP_STRING, PROP_FILEPATH);

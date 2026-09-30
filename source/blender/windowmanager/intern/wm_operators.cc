@@ -2418,6 +2418,32 @@ static void WM_OT_window_fullscreen_toggle(wmOperatorType *ot)
   ot->poll = WM_operator_winactive;
 }
 
+static bool wm_window_titlebar_buttons_poll(bContext *C)
+{
+  const wmWindow *win = CTX_wm_window(C);
+  return win && WM_window_titlebar_buttons_drawn(win);
+}
+
+static void WM_OT_window_minimize(wmOperatorType *ot)
+{
+  ot->name = "Minimize Window";
+  ot->idname = "WM_OT_window_minimize";
+  ot->description = "Minimize the window";
+
+  ot->exec = wm_window_minimize_exec;
+  ot->poll = wm_window_titlebar_buttons_poll;
+}
+
+static void WM_OT_window_maximize_toggle(wmOperatorType *ot)
+{
+  ot->name = "Maximize Window";
+  ot->idname = "WM_OT_window_maximize_toggle";
+  ot->description = "Maximize the window, or restore it to its size";
+
+  ot->exec = wm_window_maximize_toggle_exec;
+  ot->poll = wm_window_titlebar_buttons_poll;
+}
+
 static wmOperatorStatus wm_exit_blender_exec(bContext *C, wmOperator * /*op*/)
 {
   wm_exit_schedule_delayed(C);
@@ -4244,6 +4270,8 @@ void wm_operatortypes_register()
   WM_operatortype_append(WM_OT_read_userpref);
   WM_operatortype_append(WM_OT_read_factory_userpref);
   WM_operatortype_append(WM_OT_window_fullscreen_toggle);
+  WM_operatortype_append(WM_OT_window_minimize);
+  WM_operatortype_append(WM_OT_window_maximize_toggle);
   WM_operatortype_append(WM_OT_quit_blender);
   WM_operatortype_append(WM_OT_open_mainfile);
   WM_operatortype_append(WM_OT_revert_mainfile);
