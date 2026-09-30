@@ -158,6 +158,19 @@ static bool glass_window_has_children(const wmWindowManager *wm, const wmWindow 
   return false;
 }
 
+static bool g_force_opaque = false;
+
+void wm_draw_glass_force_opaque(const bool force_opaque)
+{
+  g_force_opaque = force_opaque;
+}
+
+/** The window is drawn see-through (with transparency), see #WM_window_is_see_through. */
+static bool wm_draw_glass_see_through(const wmWindow *win)
+{
+  return !g_force_opaque && WM_window_is_see_through(win);
+}
+
 void wm_draw_glass_window_begin(const wmWindowManager *wm, const wmWindow *win)
 {
   if (!ui::glass_enabled()) {
@@ -186,7 +199,7 @@ void wm_draw_glass_window_begin(const wmWindowManager *wm, const wmWindow *win)
     backdrop.desktop_size[0] = desktop_size.x;
     backdrop.desktop_size[1] = desktop_size.y;
   }
-  backdrop.see_through = WM_window_is_see_through(win);
+  backdrop.see_through = wm_draw_glass_see_through(win);
   ui::glass_window_backdrop_set(&backdrop);
 
   /* A child window lying over its parent shows (the frosted copy of) the parent behind it. When
@@ -236,7 +249,7 @@ void wm_draw_glass_window_end(wmWindowManager *wm, const wmWindow *win)
 
   const bool keep_frame = ui::glass_blur_enabled() && glass_window_has_children(wm, win) &&
                           (WM_capabilities_flag() & WM_CAPABILITY_WINDOW_POSITION) &&
-                          !WM_window_is_see_through(win);
+                          !wm_draw_glass_see_through(win);
   if (!keep_frame) {
     if (GlassWindow *glass_win = g_windows.lookup_ptr(win)) {
       if (glass_win->frame) {
@@ -296,7 +309,7 @@ void wm_draw_glass_cards(const wmWindow *win)
 
 void wm_draw_glass_region_keep_opaque(const wmWindow *win, const ARegion *region)
 {
-  if (!ui::glass_enabled() || !WM_window_is_see_through(win)) {
+  if (!ui::glass_enabled() || !wm_draw_glass_see_through(win)) {
     return;
   }
   const rcti &rect = region->winrct;
@@ -452,7 +465,7 @@ bool wm_draw_glass_capture(const wmWindow *win)
   const float mask_all[2] = {-2.0f, -1.0f};
   gpu::Texture *full_tex = GPU_offscreen_color_texture(g_glass.full);
   /* A see-through window has transparency, keep it. */
-  const GlassBackdropMode mode = WM_window_is_see_through(win) ? GlassBackdropMode::SeeThrough :
+  const GlassBackdropMode mode = wm_draw_glass_see_through(win) ? GlassBackdropMode::SeeThrough :
                                                                  GlassBackdropMode::Opaque;
   gpu::Shader *shader = glass_backdrop_shader_bind(
       rect, full_rect, full_rect, no_tint, params, mask_all, mode);
@@ -510,7 +523,7 @@ void wm_draw_glass_backdrop(const wmWindow *win, ARegion *region)
   const float params[4] = {ui::glass_blur_radius(), 0.018f, 1.6f, 1.03f};
 
   gpu::Texture *backdrop = GPU_offscreen_color_texture(g_glass.reduced);
-  if (WM_window_is_see_through(win)) {
+  if (wm_draw_glass_see_through(win)) {
     /* The blurred backdrop has transparency (the desktop shows through): clear what it replaces
      * first, then add it. */
     gpu::Shader *shader = glass_backdrop_shader_bind(rect_geom,

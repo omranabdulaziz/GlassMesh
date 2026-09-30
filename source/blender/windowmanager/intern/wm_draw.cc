@@ -1501,7 +1501,9 @@ uint8_t *WM_window_pixels_read_from_offscreen(bContext *C, wmWindow *win, int r_
   const uint rect_len = win_size[0] * win_size[1];
   uint8_t *rect = MEM_new_array_uninitialized<uint8_t>(4 * rect_len, __func__);
   GPU_offscreen_bind(offscreen, false);
+  wm_draw_glass_force_opaque(true);
   wm_draw_window_onscreen(C, win, -1);
+  wm_draw_glass_force_opaque(false);
   GPU_offscreen_unbind(offscreen, false);
   GPU_offscreen_read_color(offscreen, GPU_DATA_UBYTE, rect);
   GPU_offscreen_free(offscreen);
@@ -1549,7 +1551,11 @@ bool WM_window_pixels_read_sample_from_offscreen(bContext *C,
 
 uint8_t *WM_window_pixels_read(bContext *C, wmWindow *win, int r_size[2])
 {
-  if (WM_capabilities_flag() & WM_CAPABILITY_GPU_FRONT_BUFFER_READ) {
+  /* GlassMesh: a see-through window's pixels have transparency (the desktop isn't in them),
+   * screenshots draw it again with the wallpaper. */
+  if ((WM_capabilities_flag() & WM_CAPABILITY_GPU_FRONT_BUFFER_READ) &&
+      !WM_window_is_see_through(win))
+  {
     return WM_window_pixels_read_from_frontbuffer(CTX_wm_manager(C), win, r_size);
   }
   return WM_window_pixels_read_from_offscreen(C, win, r_size);

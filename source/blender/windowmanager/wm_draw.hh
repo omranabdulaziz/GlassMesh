@@ -56,6 +56,8 @@ void wm_draw_glass_cards(const wmWindow *win);
  * desktop shows through its colors.
  */
 void wm_draw_glass_region_keep_opaque(const wmWindow *win, const ARegion *region);
+/** Draw see-through windows opaque (with the wallpaper) until called again with false. */
+void wm_draw_glass_force_opaque(bool force_opaque);
 /** A non-viewport region that can be blended (translucent) with the glass style. */
 bool wm_draw_glass_region_is_translucent(const ARegion *region);
 /**
