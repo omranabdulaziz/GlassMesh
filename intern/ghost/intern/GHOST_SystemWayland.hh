@@ -60,6 +60,12 @@ void ghost_wl_surface_tag_cursor_tablet(struct wl_surface *wl_surface);
  * Scaling "from" is used to clamp cursor coordinates in WAYLAND local coordinates. */
 
 struct GWL_WindowScaleParams;
+
+/** GlassMesh: the blur behind a see-through window, see #GHOST_SystemWayland::window_blur_set. */
+struct GWL_WindowBlur {
+  struct ext_background_effect_surface_v1 *effect = nullptr;
+  struct org_kde_kwin_blur *kde = nullptr;
+};
 wl_fixed_t gwl_window_scale_wl_fixed_to(const GWL_WindowScaleParams &scale_params,
                                         wl_fixed_t value);
 wl_fixed_t gwl_window_scale_wl_fixed_from(const GWL_WindowScaleParams &scale_params,
@@ -296,6 +302,11 @@ class GHOST_SystemWayland : public GHOST_System {
 
   bool use_window_frame_get() const;
   bool use_window_frame_csd_get() const;
+
+  /** GlassMesh: the compositor can blur what is behind a surface (for see-through windows). */
+  bool window_blur_supported() const;
+  /** GlassMesh: blur what is behind all of \a surface, or stop, applied on its next commit. */
+  void window_blur_set(struct wl_surface *surface, bool enable, GWL_WindowBlur &blur);
 #ifdef WITH_GHOST_CSD
   const GHOST_CSD_Layout &csd_layout_base_get() const;
 #endif

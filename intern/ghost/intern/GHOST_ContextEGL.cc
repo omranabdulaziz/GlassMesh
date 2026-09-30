@@ -456,6 +456,11 @@ GHOST_TSuccess GHOST_ContextEGL::initializeDrawingContext()
   attrib_list.push_back(EGL_BLUE_SIZE);
   attrib_list.push_back(8);
 
+  if (alpha_background_) {
+    attrib_list.push_back(EGL_ALPHA_SIZE);
+    attrib_list.push_back(8);
+  }
+
   if (native_window_ == 0) {
     /* Off-screen surface. */
     attrib_list.push_back(EGL_SURFACE_TYPE);
@@ -483,7 +488,8 @@ GHOST_TSuccess GHOST_ContextEGL::initializeDrawingContext()
      * See #102994. */
     /* EGL_EXT_present_opaque isn't added to the latest release of epoxy, but is part of the latest
      * EGL https://github.com/KhronosGroup/EGL-Registry/blob/main/api/egl.xml */
-    if (epoxy_has_egl_extension(display_, "EGL_EXT_present_opaque")) {
+    /* GlassMesh: see-through windows use the alpha. */
+    if (!alpha_background_ && epoxy_has_egl_extension(display_, "EGL_EXT_present_opaque")) {
 #  ifndef EGL_PRESENT_OPAQUE_EXT
 #    define EGL_PRESENT_OPAQUE_EXT 0x31DF
 #  endif

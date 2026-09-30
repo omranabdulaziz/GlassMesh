@@ -103,6 +103,11 @@ enum GHOST_GPUFlags {
   GHOST_gpuStereoVisual = (1 << 0),
   GHOST_gpuDebugContext = (1 << 1),
   GHOST_gpuVSyncIsOverridden = (1 << 2),
+  /**
+   * GlassMesh: the window's frame-buffer has alpha the compositor uses, for see-through windows
+   * (Wayland, see #GHOST_kDecorationSeeThrough).
+   */
+  GHOST_gpuAlphaBackground = (1 << 3),
 };
 
 enum GHOST_DialogOptions {
@@ -1113,6 +1118,11 @@ struct GHOST_CSD_Elem {
 struct GHOST_CSD_Layout {
   int32_t buttons_num;
   GHOST_TCSD_Type buttons[5];
+  /**
+   * GlassMesh: the window has no title bar, the application's top bar takes its place
+   * (#GHOST_kDecorationIntegratedTitleBar): no title and no buttons, only the borders.
+   */
+  bool titlebar_integrated;
 };
 
 #define GHOST_CSD_DPI_FRACTIONAL_BASE 96

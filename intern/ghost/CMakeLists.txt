@@ -402,6 +402,14 @@ elseif(WITH_GHOST_X11 OR WITH_GHOST_WAYLAND)
     generate_protocol_bindings(
       "${WAYLAND_PROTOCOLS_DIR}/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml"
     )
+    # GlassMesh: the blur behind see-through windows (included, older versions of
+    # `wayland-protocols` don't have it, the KDE protocol isn't part of it).
+    generate_protocol_bindings(
+      "${CMAKE_CURRENT_SOURCE_DIR}/intern/wayland_protocols/ext-background-effect-v1.xml"
+    )
+    generate_protocol_bindings(
+      "${CMAKE_CURRENT_SOURCE_DIR}/intern/wayland_protocols/kde-blur.xml"
+    )
 
     unset(INC_DST)
 

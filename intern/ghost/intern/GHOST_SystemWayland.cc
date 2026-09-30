@@ -76,6 +76,10 @@
 #include <xdg-activation-v1-client-protocol.h>
 #include <xdg-output-unstable-v1-client-protocol.h>
 #include <xdg-toplevel-icon-v1-client-protocol.h>
+
+/* GlassMesh: the blur behind see-through windows. */
+#include <ext-background-effect-v1-client-protocol.h>
+#include <kde-blur-client-protocol.h>
 #ifdef WITH_INPUT_IME
 #  include <text-input-unstable-v3-client-protocol.h>
 #endif
@@ -1567,6 +1571,12 @@ struct GWL_Display {
     /** Maximum preferred icon size from the compositor (0 = no preference, use a default). */
     int toplevel_icon_logical_size_max = 0;
   } xdg;
+
+  /** GlassMesh: the compositor blurs what is behind see-through windows. */
+  struct {
+    ext_background_effect_manager_v1 *background_effect_manager = nullptr;
+    org_kde_kwin_blur_manager *kde_blur_manager = nullptr;
+  } blur;
 
   GWL_DisplayTimeStamp input_timestamp;
 
@@ -3420,6 +3430,10 @@ static bool gwl_window_csd_active_elem_motion(GWL_Seat *seat,
   if (i == elems_num) [[unlikely]] {
     return false;
   }
+  /* GlassMesh: the empty part of the top bar takes the place of the title bar. */
+  if (active_type_next == GHOST_kCSDTypeBody && win->titlebar_drag_hit(event_xy)) {
+    active_type_next = GHOST_kCSDTypeTitlebar;
+  }
 
   /* Update motion. */
   GHOST_CSD_EventState &event_state = win->csd_eventstate_get();
@@ -3757,7 +3771,8 @@ static void gwl_window_csd_active_elem_button(GWL_Seat *seat,
         break;
       }
       case GHOST_kCSDTypeTitlebar: {
-        if (is_press) {
+        /* GlassMesh: the top bar has its own context menu. */
+        if (is_press && !win->titlebar_integrated_get()) {
           const GHOST_CSD_EventState &event_state = win->csd_eventstate_get();
           const GWL_WindowScaleParams &scale_params = win->scale_params_get();
           const int event_xy[2] = {
@@ -8044,6 +8059,46 @@ static void gwl_registry_xdg_toplevel_icon_manager_remove(GWL_Display *display,
   *value_p = nullptr;
 }
 
+/* GlassMesh: #GWL_Display.blur */
+
+static void gwl_registry_ext_background_effect_manager_add(GWL_Display *display,
+                                                          const GWL_RegisteryAdd_Params &params)
+{
+  const uint version = GWL_IFACE_VERSION_CLAMP(params.version, 1u, 1u);
+  /* The "capabilities" event isn't used: in the first version of the protocol the blur
+   * capability has the value zero. Blur is its only effect. */
+  display->blur.background_effect_manager = static_cast<ext_background_effect_manager_v1 *>(
+      wl_registry_bind(
+          display->wl.registry, params.name, &ext_background_effect_manager_v1_interface, version));
+  gwl_registry_entry_add(display, params, nullptr);
+}
+static void gwl_registry_ext_background_effect_manager_remove(GWL_Display *display,
+                                                             void * /*user_data*/,
+                                                             const bool /*on_exit*/)
+{
+  ext_background_effect_manager_v1 **value_p = &display->blur.background_effect_manager;
+  ext_background_effect_manager_v1_destroy(*value_p);
+  *value_p = nullptr;
+}
+
+static void gwl_registry_kde_blur_manager_add(GWL_Display *display,
+                                              const GWL_RegisteryAdd_Params &params)
+{
+  const uint version = GWL_IFACE_VERSION_CLAMP(params.version, 1u, 1u);
+  display->blur.kde_blur_manager = static_cast<org_kde_kwin_blur_manager *>(wl_registry_bind(
+      display->wl.registry, params.name, &org_kde_kwin_blur_manager_interface, version));
+  gwl_registry_entry_add(display, params, nullptr);
+}
+static void gwl_registry_kde_blur_manager_remove(GWL_Display *display,
+                                                 void * /*user_data*/,
+                                                 const bool /*on_exit*/)
+{
+  org_kde_kwin_blur_manager **value_p = &display->blur.kde_blur_manager;
+  /* No destructor request in the protocol. */
+  wl_proxy_destroy(reinterpret_cast<wl_proxy *>(*value_p));
+  *value_p = nullptr;
+}
+
 /* #GWL_Display.wp_fractional_scale_manger */
 
 static void gwl_registry_wp_fractional_scale_manager_add(GWL_Display *display,
@@ -8259,6 +8314,18 @@ static const GWL_RegistryHandler gwl_registry_handlers[] = {
         /*add_fn*/ gwl_registry_xdg_toplevel_icon_manager_add,
         /*update_fn*/ nullptr,
         /*remove_fn*/ gwl_registry_xdg_toplevel_icon_manager_remove,
+    },
+    {
+        /*interface_p*/ &ext_background_effect_manager_v1_interface.name,
+        /*add_fn*/ gwl_registry_ext_background_effect_manager_add,
+        /*update_fn*/ nullptr,
+        /*remove_fn*/ gwl_registry_ext_background_effect_manager_remove,
+    },
+    {
+        /*interface_p*/ &org_kde_kwin_blur_manager_interface.name,
+        /*add_fn*/ gwl_registry_kde_blur_manager_add,
+        /*update_fn*/ nullptr,
+        /*remove_fn*/ gwl_registry_kde_blur_manager_remove,
     },
     {
         /*interface_p*/ &wp_fractional_scale_manager_v1_interface.name,
@@ -9621,7 +9688,9 @@ GHOST_IWindow *GHOST_SystemWayland::createWindow(const char *title,
                                                         is_dialog,
                                                         context_params,
                                                         exclusive,
-                                                        gpu_settings.preferred_device);
+                                                        gpu_settings.preferred_device,
+                                                        (gpu_settings.flags &
+                                                         GHOST_gpuAlphaBackground) != 0);
 
   if (window) {
     if (window->getValid()) {
@@ -9986,10 +10055,8 @@ GHOST_TCapabilityFlag GHOST_SystemWayland::getCapabilities() const
           ((has_wl_trackpad_physical_direction == 1) ?
                0 :
                GHOST_kCapabilityTrackpadPhysicalDirection) |
-          /* This WAYLAND back-end doesn't have support for window decoration styles.
-           * In all likelihood, this back-end will eventually need to support client-side
-           * decorations, see #113795. */
-          GHOST_kCapabilityWindowDecorationStyles |
+          /* GlassMesh: window decoration styles are supported for the glass styles (the
+           * colored title bar isn't). */
           /* No support for window path meta-data. */
           GHOST_kCapabilityWindowPath |
           /* Check if we should use Client Side Decorations (CSD.) */
@@ -10314,6 +10381,51 @@ void GHOST_SystemWayland::xdg_toplevel_icon_update(GHOST_WindowWayland *window,
 bool GHOST_SystemWayland::use_window_frame_get() const
 {
   return display_->use_window_frame;
+}
+
+bool GHOST_SystemWayland::window_blur_supported() const
+{
+  return display_->blur.kde_blur_manager || display_->blur.background_effect_manager;
+}
+
+void GHOST_SystemWayland::window_blur_set(wl_surface *surface,
+                                          const bool enable,
+                                          GWL_WindowBlur &blur)
+{
+  if (enable) {
+    if (display_->blur.kde_blur_manager) {
+      if (blur.kde == nullptr) {
+        blur.kde = org_kde_kwin_blur_manager_create(display_->blur.kde_blur_manager, surface);
+      }
+      /* A null region is the whole surface. */
+      org_kde_kwin_blur_set_region(blur.kde, nullptr);
+      org_kde_kwin_blur_commit(blur.kde);
+    }
+    else if (display_->blur.background_effect_manager) {
+      if (blur.effect == nullptr) {
+        blur.effect = ext_background_effect_manager_v1_get_background_effect(
+            display_->blur.background_effect_manager, surface);
+      }
+      /* A null region removes the effect, the region is clipped to the surface. */
+      wl_region *region = wl_compositor_create_region(display_->wl.compositor);
+      wl_region_add(region, 0, 0, INT32_MAX, INT32_MAX);
+      ext_background_effect_surface_v1_set_blur_region(blur.effect, region);
+      wl_region_destroy(region);
+    }
+    return;
+  }
+  if (blur.kde) {
+    if (display_->blur.kde_blur_manager) {
+      org_kde_kwin_blur_manager_unset(display_->blur.kde_blur_manager, surface);
+    }
+    org_kde_kwin_blur_release(blur.kde);
+    blur.kde = nullptr;
+  }
+  if (blur.effect) {
+    /* The effect is removed on the next commit. */
+    ext_background_effect_surface_v1_destroy(blur.effect);
+    blur.effect = nullptr;
+  }
 }
 
 bool GHOST_SystemWayland::use_window_frame_csd_get() const

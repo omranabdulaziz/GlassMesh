@@ -118,7 +118,8 @@ class GHOST_WindowWayland : public GHOST_Window {
                       const bool is_dialog,
                       const GHOST_ContextParams &context_params,
                       const bool exclusive,
-                      const GHOST_GPUDevice &preferred_device);
+                      const GHOST_GPUDevice &preferred_device,
+                      bool alpha_background = false);
 
   ~GHOST_WindowWayland() override;
 
@@ -181,6 +182,11 @@ class GHOST_WindowWayland : public GHOST_Window {
   void beginIME(int32_t x, int32_t y, int32_t w, int32_t h, bool completed) override;
   void endIME() override;
 #endif /* WITH_INPUT_IME */
+
+  /** GlassMesh: the glass decoration styles (integrated title bar, see-through). */
+  GHOST_TSuccess applyWindowDecorationStyle() override;
+  /** \copydoc #GHOST_IWindow::setTitleBarDragArea */
+  void setTitleBarDragArea(int32_t height, const GHOST_Rect *exclude, int32_t exclude_num) override;
 
   /* WAYLAND direct-data access. */
 
@@ -251,10 +257,19 @@ class GHOST_WindowWayland : public GHOST_Window {
   void csd_elem_active_type_set(GHOST_TCSD_Type type);
 #endif
 
+  /** GlassMesh: the application's top bar takes the place of the title bar. */
+  bool titlebar_integrated_get() const;
+  /** GlassMesh: \a xy (window pixels, from the top left) moves the window. */
+  bool titlebar_drag_hit(const int xy[2]) const;
+
  private:
   GHOST_SystemWayland *system_;
   struct GWL_Window *window_;
   GHOST_GPUDevice preferred_device_;
+
+  /** GlassMesh: the drag area of an integrated title bar, see #setTitleBarDragArea. */
+  int32_t titlebar_drag_height_ = 0;
+  std::vector<GHOST_Rect> titlebar_no_drag_;
 
   /**
    * \param type: The type of rendering context create.

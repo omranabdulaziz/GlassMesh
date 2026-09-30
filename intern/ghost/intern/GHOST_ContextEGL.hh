@@ -107,6 +107,15 @@ class GHOST_ContextEGL : public GHOST_Context {
 
   EGLContext getContext() const;
 
+  /**
+   * GlassMesh: a frame-buffer with alpha that the compositor uses (see-through windows).
+   * Call before #initializeDrawingContext.
+   */
+  void setAlphaBackground(bool alpha_background)
+  {
+    alpha_background_ = alpha_background;
+  }
+
  private:
   bool bindAPI(EGLenum api);
 
@@ -137,6 +146,8 @@ class GHOST_ContextEGL : public GHOST_Context {
    * True when the surface is created from `native_window_`.
    */
   bool surface_from_native_window_;
+  /** GlassMesh: see #setAlphaBackground. */
+  bool alpha_background_ = false;
 
   static EGLContext s_gl_sharedContext;
   static EGLint s_gl_sharedCount;

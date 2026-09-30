@@ -379,6 +379,14 @@ struct GWL_Window {
   GWL_WindowCSD *xdg_csd = nullptr;
 #endif
 
+  /** GlassMesh: the application's top bar takes the place of our own CSD's title bar. */
+  bool titlebar_integrated = false;
+  /** GlassMesh: the frame-buffer has alpha (created for see-through windows). */
+  bool alpha_background = false;
+  /** GlassMesh: see-through (the compositor blurs what is behind the window). */
+  bool see_through = false;
+  GWL_WindowBlur blur;
+
   /**
    * The current value of frame, copied from `frame_pending` when applying updates.
    * This avoids the need for locking when reading from `frame`.
@@ -960,7 +968,8 @@ static void gwl_window_frame_update_from_pending_no_lock(GWL_Window *win)
     else {
       GHOST_SystemWayland *system = win->ghost_system;
       const GHOST_CSD_Params &params = system->getWindowCSD();
-      const GHOST_CSD_Layout &button_layout = system->getWindowCSD_Layout();
+      GHOST_CSD_Layout button_layout = system->getWindowCSD_Layout();
+      button_layout.titlebar_integrated = win->titlebar_integrated;
 
       const int32_t fractional_scale[2] = {
           GHOST_CSD_DPI_FRACTIONAL_BASE,
@@ -1522,12 +1531,14 @@ GHOST_WindowWayland::GHOST_WindowWayland(GHOST_SystemWayland *system,
                                          const bool is_dialog,
                                          const GHOST_ContextParams &context_params,
                                          const bool exclusive,
-                                         const GHOST_GPUDevice &preferred_device)
+                                         const GHOST_GPUDevice &preferred_device,
+                                         const bool alpha_background)
     : GHOST_Window(width, height, state, context_params, exclusive),
       system_(system),
       window_(new GWL_Window),
       preferred_device_(preferred_device)
 {
+  window_->alpha_background = alpha_background;
 #ifdef USE_EVENT_BACKGROUND_THREAD
   std::lock_guard lock_server_guard{*system->server_mutex};
 #endif
@@ -1952,6 +1963,9 @@ GHOST_WindowWayland::~GHOST_WindowWayland()
   }
 #endif
 
+  /* GlassMesh. */
+  system_->window_blur_set(window_->wl.surface, false, window_->blur);
+
   /* Clear any pointers to this window. This is needed because there are no guarantees
    * that flushing the display will the "leave" handlers before handling events. */
   system_->window_surface_unref(window_->wl.surface);
@@ -2297,7 +2311,7 @@ GHOST_Context *GHOST_WindowWayland::newDrawingContext(GHOST_TDrawingContextType 
 #ifdef WITH_OPENGL_BACKEND
     case GHOST_kDrawingContextTypeOpenGL: {
       for (int minor = 6; minor >= 3; --minor) {
-        GHOST_Context *context = new GHOST_ContextEGL(
+        GHOST_ContextEGL *context = new GHOST_ContextEGL(
             system_,
             want_context_params_,
             EGLNativeWindowType(window_->backend.egl_window),
@@ -2309,6 +2323,8 @@ GHOST_Context *GHOST_WindowWayland::newDrawingContext(GHOST_TDrawingContextType 
                 (want_context_params_.is_debug ? EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR : 0),
             GHOST_OPENGL_EGL_RESET_NOTIFICATION_STRATEGY,
             EGL_OPENGL_API);
+        /* GlassMesh: see-through windows need the alpha of the frame-buffer. */
+        context->setAlphaBackground(window_->alpha_background);
 
         if (context->initializeDrawingContext()) {
           return context;
@@ -2457,6 +2473,99 @@ GHOST_TSuccess GHOST_WindowWayland::deactivate()
   const GHOST_TSuccess success = system_->pushEvent_maybe_pending(std::make_unique<GHOST_Event>(
       system_->getMilliSeconds(), GHOST_kEventWindowDeactivate, this));
   return success;
+}
+
+GHOST_TSuccess GHOST_WindowWayland::applyWindowDecorationStyle()
+{
+#ifdef USE_EVENT_BACKGROUND_THREAD
+  std::lock_guard lock_server_guard{*system_->server_mutex};
+#endif
+  /* GlassMesh: the top bar takes the place of the title bar only with our own CSD (the
+   * compositor draws the title bar otherwise). */
+  bool integrated = (window_decoration_style_flags_ & GHOST_kDecorationIntegratedTitleBar);
+#ifdef WITH_GHOST_CSD
+  if (window_->xdg_csd == nullptr) {
+    integrated = false;
+  }
+#else
+  integrated = false;
+#endif
+  /* GlassMesh: see-through needs a frame-buffer with alpha and a compositor that blurs. */
+  const bool see_through = (window_decoration_style_flags_ & GHOST_kDecorationSeeThrough) &&
+                           window_->alpha_background && system_->window_blur_supported();
+
+  int flags = window_decoration_style_flags_;
+  flags = integrated ? (flags | GHOST_kDecorationIntegratedTitleBar) :
+                       (flags & ~GHOST_kDecorationIntegratedTitleBar);
+  flags = see_through ? (flags | GHOST_kDecorationSeeThrough) :
+                        (flags & ~GHOST_kDecorationSeeThrough);
+  window_decoration_style_flags_ = GHOST_TWindowDecorationStyleFlags(flags);
+
+  if (integrated != window_->titlebar_integrated) {
+    window_->titlebar_integrated = integrated;
+#ifdef WITH_GHOST_CSD
+    /* Lay out the decorations again (without the title bar), the window contents change. */
+    int32_t size[2] = {window_->frame.size[0], window_->frame.size[1]};
+    if (GWL_WindowCSD *xdg_csd = window_->xdg_csd) {
+      if (gwl_window_state_get(window_) != GHOST_kWindowStateFullScreen) {
+        const GHOST_CSD_Params &params = system_->getWindowCSD();
+        GHOST_CSD_Layout button_layout = system_->getWindowCSD_Layout();
+        button_layout.titlebar_integrated = integrated;
+        const int32_t fractional_scale[2] = {GHOST_CSD_DPI_FRACTIONAL_BASE, getDPIHint()};
+        xdg_csd->csd_elems_num = params.layout_callback(size,
+                                                        fractional_scale,
+                                                        gwl_window_state_get(window_),
+                                                        &button_layout,
+                                                        xdg_csd->csd_elems);
+      }
+    }
+#endif
+    notify_size();
+    notify_decor_redraw();
+  }
+
+  if (window_->alpha_background && (see_through != window_->see_through || !see_through)) {
+    window_->see_through = see_through;
+    /* Where the window isn't see-through its alpha must not show the desktop. */
+    wl_region *opaque_region = nullptr;
+    if (!see_through) {
+      opaque_region = wl_compositor_create_region(system_->wl_compositor_get());
+      wl_region_add(opaque_region, 0, 0, INT32_MAX, INT32_MAX);
+    }
+    wl_surface_set_opaque_region(window_->wl.surface, opaque_region);
+    if (opaque_region) {
+      wl_region_destroy(opaque_region);
+    }
+    system_->window_blur_set(window_->wl.surface, see_through, window_->blur);
+    /* Applied on the next commit (the next buffer swap). */
+  }
+  return GHOST_kSuccess;
+}
+
+void GHOST_WindowWayland::setTitleBarDragArea(int32_t height,
+                                              const GHOST_Rect *exclude,
+                                              int32_t exclude_num)
+{
+  titlebar_drag_height_ = height;
+  titlebar_no_drag_.assign(exclude, exclude + std::max(exclude_num, 0));
+}
+
+bool GHOST_WindowWayland::titlebar_integrated_get() const
+{
+  return window_->titlebar_integrated;
+}
+
+bool GHOST_WindowWayland::titlebar_drag_hit(const int xy[2]) const
+{
+  if (!window_->titlebar_integrated || xy[1] < 0 || xy[1] >= titlebar_drag_height_) {
+    return false;
+  }
+  for (const GHOST_Rect &rect : titlebar_no_drag_) {
+    if (xy[0] >= rect.l_ && xy[0] < rect.r_ && xy[1] >= rect.t_ && xy[1] < rect.b_) {
+      return false;
+    }
+  }
+  return true;
 }
 
 GHOST_TSuccess GHOST_WindowWayland::notify_size()
